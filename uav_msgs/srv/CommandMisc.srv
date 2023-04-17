@@ -1,0 +1,8 @@
+# One of "READY", "TAKEOFF", "VISUAL_CONTROL", "LAND", "EMERGENCY_STOP".
+string flag_name
+bool flag_value
+# For "TAKEOFF", int is takeoff height in metres.
+int64 flag_value_int
+---
+# 0 is success, !0 is failure.
+int64 status

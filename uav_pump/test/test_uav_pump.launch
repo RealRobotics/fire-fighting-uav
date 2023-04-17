@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+  <node pkg="uav_pump" type="uav_pump_node" name="uav_pump_node" output="screen"/>
+  <test pkg="uav_pump" test-name="test_uav_pump" type="test_uav_pump" />
+</launch>

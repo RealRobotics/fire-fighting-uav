@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="thermal_camera_mlx90640" type="thermal_camera_mlx90640_node" name="thermal_camera_mlx90640" launch-prefix="sudo -E LD_LIBRARY_PATH=/home/ubuntu/catkin_ws/devel/lib:/opt/ros/melodic/lib">
+  </node>
+</launch>

@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>uav_pump</name>
+  <version>0.0.0</version>
+  <description>The uav_pump package</description>
+
+  
+  <maintainer email="s.dubey@leeds.ac.uk">shival_dubey</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>actionlib_msgs</depend>
+  <depend>serial</depend>
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>uav_msgs</depend>
+  <depend>actionlib</depend>
+
+
+  <test_depend>gtest</test_depend>
+  <test_depend>rostest</test_depend>
+  <doc_depend>doxygen</doc_depend>
+
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>

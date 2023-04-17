@@ -1,0 +1,3 @@
+Header header
+float64 euclidean_distance
+geometry_msgs/Pose pose

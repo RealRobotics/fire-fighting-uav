@@ -1,0 +1,3 @@
+Header Header
+float64 left_wall_dist
+float64 right_wall_dist
