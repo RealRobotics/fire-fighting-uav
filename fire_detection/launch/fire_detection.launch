@@ -1,0 +1,7 @@
+<launch>
+    <arg name="display_images"  default="true"/>
+    
+    <node pkg="fire_detection" name="fire_detector_node" type="fire_detector_node" ns="fire_detection" output="screen" >
+        <param name="display_images"    type="bool"     value="$(arg display_images)"/>
+    </node>
+</launch>
