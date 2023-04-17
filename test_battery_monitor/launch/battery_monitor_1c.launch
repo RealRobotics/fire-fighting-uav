@@ -1,0 +1,4 @@
+<launch>
+<node name="Battery_Monitor1" pkg="test_battery_monitor" type="battery_monitor" output="screen"/>  
+<node name="test_case_1c" pkg="test_battery_monitor" type="test_case_1c" output="screen"/>
+</launch>
