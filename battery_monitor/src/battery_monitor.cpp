@@ -41,11 +41,11 @@ void BatteryCallback(const sensor_msgs::BatteryState::ConstPtr& msg)
   }
 
   //TODO(#1)
-	std_msgs::Bool msg2;
-	msg2.data = true;
-	input_pub.publish(msg2);
+  std_msgs::Bool msg2;
+  msg2.data = true;
+  input_pub.publish(msg2);
 
-	battery_status_pub.publish(output_msg);
+  battery_status_pub.publish(output_msg);
 }	
 
 int8_t LoadThreshold(ros::NodeHandle nh, std::string threshold_name) {
@@ -75,20 +75,20 @@ int main(int argc, char **argv)
   safety_threshold = LoadThreshold(nh, "safety_threshold");
   mission_threshold = LoadThreshold(nh, "mission_threshold");
 
-	if (mission_threshold<safety_threshold)
-	{
-		ROS_ERROR("Mission threshold is below Safety threshold! Please fix the settings.");
-		ros::shutdown();
-	}
+  if (mission_threshold<safety_threshold)
+  {
+    ROS_ERROR("Mission threshold is below Safety threshold! Please fix the settings.");
+    ros::shutdown();
+  }
   
   input_pub = nh.advertise<std_msgs::Bool>("input_accepted",1000);
-	battery_status_pub = nh.advertise<battery_monitor::BatteryStatus>("battery_status", 1000);
+  battery_status_pub = nh.advertise<battery_monitor::BatteryStatus>("battery_status", 1000);
 
-	ros::Subscriber battery_sub = nh.subscribe("dji_sdk/battery_state", 10, BatteryCallback);
+  ros::Subscriber battery_sub = nh.subscribe("dji_sdk/battery_state", 10, BatteryCallback);
 
-	ROS_INFO("Battery monitor is running");
+  ROS_INFO("Battery monitor is running");
 
-	ros::spin();
+  ros::spin();
 
   return 0;
 }
