@@ -1,0 +1,6 @@
+<launch>
+<param name="safety_threshold" value="30"/>
+<param name="mission_threshold" value="40"/>
+
+<node name="battery_monitor" pkg="battery_monitor" type="battery_monitor" output="screen"/>  
+</launch>
