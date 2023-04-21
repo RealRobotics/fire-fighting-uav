@@ -50,17 +50,14 @@ void BatteryCallback(const sensor_msgs::BatteryState::ConstPtr& msg)
 
 int8_t LoadThreshold(ros::NodeHandle nh, std::string threshold_name) {
   int read_threshold {-1};
-  if (nh.getParam(threshold_name, read_threshold))
-  {
+  if (nh.getParam(threshold_name, read_threshold)) {
     if ((read_threshold >= 0) && (read_threshold <=100)) {
       ROS_INFO("%s is going to be set to %d percent", threshold_name.c_str(), read_threshold);
     } else {
       ROS_ERROR("Value for %s must be between 0 and 100.", threshold_name.c_str());
       ros::shutdown();
     }   
-  }
-  else
-  {
+  } else {
     ROS_ERROR("Failed to get param %s", threshold_name.c_str());
     ros::shutdown();
   }
@@ -75,8 +72,7 @@ int main(int argc, char **argv)
   safety_threshold = LoadThreshold(nh, "safety_threshold");
   mission_threshold = LoadThreshold(nh, "mission_threshold");
 
-  if (mission_threshold<safety_threshold)
-  {
+  if (mission_threshold<safety_threshold) {
     ROS_ERROR("Mission threshold is below Safety threshold! Please fix the settings.");
     ros::shutdown();
   }
