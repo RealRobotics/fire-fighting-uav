@@ -1,3 +1,4 @@
+std_msgs/Header header
 uint8 status
 uint8 UNSET = 0   # The status of battery is unknown
 uint8 OK = 1 # When battery level is above mission critical threshold
