@@ -1,2 +1,2 @@
-std_msgs/Header header
+uint32 input_msg_id
 bool data

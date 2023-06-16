@@ -25,10 +25,11 @@ void BatteryCallback(const sensor_msgs::BatteryState::ConstPtr& msg)
 {
   battery_monitor::InputAccepted msg2;
   msg2.data = true;
-  msg2.header = msg->header;
+  msg2.input_msg_id = msg->header.seq;
   input_status_pub.publish(msg2);
 
   battery_monitor::BatteryStatus output_msg;
+  output_msg.input_msg_id = msg->header.seq;
   output_msg.status = battery_monitor::BatteryStatus::UNSET;
 
   if ((safety_threshold != -1) && (mission_threshold != -1)) { //the thresholds must be set for the status to be published
