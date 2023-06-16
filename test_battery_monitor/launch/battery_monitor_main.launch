@@ -1,6 +1,0 @@
-<launch>
-   <include file="$(find test_battery_monitor)/launch/battery_monitor_4a.launch"/>
-   <include file="$(find test_battery_monitor)/launch/battery_monitor_4b.launch"/>
-   <include file="$(find test_battery_monitor)/launch/battery_monitor_4c.launch"/>
-   <include file="$(find test_battery_monitor)/launch/battery_monitor_4d.launch"/>  
-</launch>
