@@ -1,8 +1,0 @@
-int32 x
-int32 y
-int32 z
-float64 yaw
-bool relative
-int64 index
----
-int64 status

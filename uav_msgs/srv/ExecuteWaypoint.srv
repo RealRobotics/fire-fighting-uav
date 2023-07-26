@@ -1,4 +1,0 @@
-sensor_msgs/NavSatFix[] waypoints
----
-# 0 is success, !0 is failure.
-int64 status

@@ -1,9 +1,0 @@
-# When running is true, the pump is running.  When false, the pump is stopped.
-# Goal definition
-bool running
----
-# Result definition
-bool running
----
-# Feedback
-bool running
