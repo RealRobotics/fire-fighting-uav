@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   sensor_msgs
-  message_generation
+  uav_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -48,11 +48,9 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  BatteryStatus.msg
-  InputAccepted.msg
-)
+#add_message_files(
+#  FILES
+#)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -73,6 +71,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   sensor_msgs
+  uav_msgs
 )
 
 ################################################
@@ -107,7 +106,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES battery_monitor
-  CATKIN_DEPENDS roscpp std_msgs message_runtime
+  CATKIN_DEPENDS roscpp std_msgs uav_msgs
 #  DEPENDS system_lib
 )
 
@@ -139,7 +138,7 @@ include_directories(
 
 add_executable(battery_monitor src/battery_monitor.cpp)
 target_link_libraries(battery_monitor ${catkin_LIBRARIES})
-add_dependencies(battery_monitor battery_monitor_generate_messages_cpp)
+#add_dependencies(battery_monitor battery_monitor_generate_messages_cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

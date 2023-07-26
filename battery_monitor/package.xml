@@ -2,7 +2,7 @@
 <package format="2">
   <name>battery_monitor</name>
   <version>1.0.0</version>
-  <description>This package listen to the raw percentage data from dji_sdk and provides three levels: OK, MISSION_CRITICAL and SAFETY_CRITICAL</description>
+  <description>This package listen to the raw percentage data from fcs_interface and provides three levels: OK, MISSION_CRITICAL and SAFETY_CRITICAL</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
@@ -57,6 +57,7 @@
   <exec_depend>roscpp</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>message_runtime</exec_depend>
+  <depend>uav_msgs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

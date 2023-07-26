@@ -24,6 +24,8 @@ set(MSG_FILES
   WallExtremities.msg
   LeedsPumpLevel.msg
   VisualControlProgress.msg
+  BatteryStatus.msg
+  InputAccepted.msg
 )
 
 set(SRV_FILES
