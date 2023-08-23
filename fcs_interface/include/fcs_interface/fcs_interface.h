@@ -8,6 +8,8 @@
 
 #include "uav_msgs/TakeOff.h"
 #include "uav_msgs/Land.h"
+#include "uav_msgs/ReturnHome.h"
+#include "uav_msgs/PrepareDrone.h"
 
 class FCS_Interface
 {
@@ -27,7 +29,8 @@ public:
    * Blocks until done.
    * @return true on success.
    */
-  bool getReady();
+  bool getReady(uav_msgs::PrepareDrone::Request  &req, 
+  uav_msgs::PrepareDrone::Response &res);
 
   /** This is a callback for a takeoff service. It causes the drone to takeoff and fly to the given altitude.
    * Blocks until done.
@@ -44,6 +47,13 @@ public:
    */
   bool land(uav_msgs::Land::Request  &req, 
   uav_msgs::Land::Response &res);
+
+  /** Causes the drone to go to its home location.
+   * Blocks until done.
+   * @return true on success.
+   */
+  bool returnHome(uav_msgs::ReturnHome::Request  &req, 
+  uav_msgs::ReturnHome::Response &res);
 
   /** Sends the given waypoint to the autopilot.
    * Blocks until the waypoint is reached.
@@ -96,8 +106,10 @@ private:
   ros::Subscriber gps_position_subscriber_;
   ros::Subscriber crane_status_subscriber_;
 
+  ros::ServiceServer prepare_service_;
   ros::ServiceServer takeoff_service_;
   ros::ServiceServer land_service_;
+  ros::ServiceServer home_service_;
 };
 
 #endif //FCS_INTERFACE_H
