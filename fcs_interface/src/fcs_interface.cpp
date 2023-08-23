@@ -39,8 +39,10 @@ bool FCS_Interface::start()
   //TODO Lenka - think if FCS should have direct access to crane, commented out for now
   //crane_status_subscriber_ = node_handle_.subscribe("leeds_crane/status", 100, &OsdkClient::craneStatusCallback, this);
 
-  takeoff_service_ = node_handle_.advertiseService("fcs_interface/take_off",  &FCS_Interface::takeOff, this);
-  land_service_ = node_handle_.advertiseService("fcs_interface/land",  &FCS_Interface::land, this);
+  prepare_service_ = node_handle_.advertiseService("fcs/prepare_drone",  &FCS_Interface::getReady, this);
+  takeoff_service_ = node_handle_.advertiseService("fcs/take_off",  &FCS_Interface::takeOff, this);
+  land_service_ = node_handle_.advertiseService("fcs/land",  &FCS_Interface::land, this);
+  home_service_ = node_handle_.advertiseService("fcs/return_home",  &FCS_Interface::returnHome, this);
 
   ROS_INFO("Started FCS_Interface.");
    //TODO LEnka - think if this method can fail and if yes, when and return false
@@ -52,7 +54,8 @@ void FCS_Interface::stop() {
   ROS_INFO("Stopped FCS_Interface.");
 }
 
-bool FCS_Interface::getReady() {
+bool FCS_Interface::getReady(uav_msgs::PrepareDrone::Request  &req, 
+  uav_msgs::PrepareDrone::Response &res) {
   ROS_INFO("FCS_Interface getting ready...");
   bool result = activate_();
   if (result) {
@@ -61,6 +64,7 @@ bool FCS_Interface::getReady() {
       ROS_INFO("FCS_Interface is ready for action!");
     }
   }
+  res.result = result;
   return result;
 }
 
@@ -95,6 +99,14 @@ bool FCS_Interface::land(uav_msgs::Land::Request  &req,
 {
   ROS_INFO("Landing...");
   bool result = droneTaskControl_(kTaskLand);
+  res.result = result;
+  return result;
+}
+
+bool FCS_Interface::returnHome(uav_msgs::ReturnHome::Request  &req, 
+  uav_msgs::ReturnHome::Response &res) {
+  ROS_INFO("Returning home...");
+  bool result = droneTaskControl_(kTaskGoHome);
   res.result = result;
   return result;
 }
@@ -157,13 +169,18 @@ bool FCS_Interface::droneTaskControl_(DroneTask task)
 {
   bool result = false;
   dji_sdk::DroneTaskControl droneTaskControl;
-  // Only implement two cases.  Go home is not needed.
-  //TODO Lenka add go home
-  droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_LAND;
-  if (task == kTaskTakeOff)
-  {
-    droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_TAKEOFF;
+  switch(task) {
+    case kTaskTakeOff:
+      droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_TAKEOFF;
+      break;
+    case kTaskLand:
+      droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_LAND;
+      break;
+    case kTaskGoHome:
+      droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_GOHOME;
+      break;
   }
+
   drone_task_client_.call(droneTaskControl);
   result = droneTaskControl.response.result;
   if (!result)
