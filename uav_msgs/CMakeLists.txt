@@ -15,6 +15,13 @@ set(MSG_FILES
   InputAccepted.msg
 )
 
+add_service_files(
+  FILES
+  TakeOff.srv
+  Land.srv
+  ReturnHome.srv
+)
+
 add_message_files(DIRECTORY msg FILES ${MSG_FILES})
 
 generate_messages(DEPENDENCIES ${MSG_DEPS})
