@@ -3,11 +3,14 @@ project(uav_msgs)
 
 set(MSG_DEPS
   std_msgs
+  actionlib_msgs
+  sensor_msgs
 )
 
 find_package(catkin REQUIRED COMPONENTS
   message_generation
   ${MSG_DEPS}
+  actionlib_msgs
 )
 
 set(MSG_FILES
@@ -20,6 +23,12 @@ add_service_files(
   TakeOff.srv
   Land.srv
   ReturnHome.srv
+  PrepareDrone.srv
+)
+
+add_action_files(
+  DIRECTORY action
+  FILES FlyToWP.action
 )
 
 add_message_files(DIRECTORY msg FILES ${MSG_FILES})
