@@ -1,0 +1,9 @@
+#goal definition
+sensor_msgs/NavSatFix goal_location
+float32 loc_precision
+---
+#result definition
+bool in_location
+---
+#feedback
+sensor_msgs/NavSatFix current_location
