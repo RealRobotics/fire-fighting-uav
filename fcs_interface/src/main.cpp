@@ -6,6 +6,5 @@ int main(int argc, char **argv) {
   ros::NodeHandle nh;
   FCS_Interface interface = FCS_Interface(nh);
   interface.start();
-  interface.getReady();
-  
+  ros::spin();
 }

@@ -7,6 +7,7 @@
 #include <dji_sdk/MissionWaypointTask.h>
 
 #include "uav_msgs/TakeOff.h"
+#include "uav_msgs/Land.h"
 
 class FCS_Interface
 {
@@ -41,7 +42,8 @@ public:
    * Blocks until done.
    * @return true on success.
    */
-  bool land();
+  bool land(uav_msgs::Land::Request  &req, 
+  uav_msgs::Land::Response &res);
 
   /** Sends the given waypoint to the autopilot.
    * Blocks until the waypoint is reached.
@@ -95,6 +97,7 @@ private:
   ros::Subscriber crane_status_subscriber_;
 
   ros::ServiceServer takeoff_service_;
+  ros::ServiceServer land_service_;
 };
 
 #endif //FCS_INTERFACE_H

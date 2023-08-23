@@ -39,11 +39,11 @@ bool FCS_Interface::start()
   //TODO Lenka - think if FCS should have direct access to crane, commented out for now
   //crane_status_subscriber_ = node_handle_.subscribe("leeds_crane/status", 100, &OsdkClient::craneStatusCallback, this);
 
-  //TODO LEnka - think if this method can fail and if yes, when and return false
-
-  takeoff_service_ = node_handle_.advertiseService("take_off",  &FCS_Interface::takeOff, this);
+  takeoff_service_ = node_handle_.advertiseService("fcs_interface/take_off",  &FCS_Interface::takeOff, this);
+  land_service_ = node_handle_.advertiseService("fcs_interface/land",  &FCS_Interface::land, this);
 
   ROS_INFO("Started FCS_Interface.");
+   //TODO LEnka - think if this method can fail and if yes, when and return false
   return true;
 }
 
@@ -90,10 +90,12 @@ bool FCS_Interface::takeOff(uav_msgs::TakeOff::Request  &req,
   return result;
 }
 
-bool FCS_Interface::land()
+bool FCS_Interface::land(uav_msgs::Land::Request  &req, 
+  uav_msgs::Land::Response &res)
 {
   ROS_INFO("Landing...");
   bool result = droneTaskControl_(kTaskLand);
+  res.result = result;
   return result;
 }
 
