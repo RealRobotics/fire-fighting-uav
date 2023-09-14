@@ -4,7 +4,7 @@
 int main(int argc, char **argv) {
   ros::init(argc, argv, "fcs_interface");
   ros::NodeHandle nh;
-  FCS_Interface interface = FCS_Interface(nh);
+  FCS_Interface interface {nh};
   interface.start();
   ros::spin();
 }
