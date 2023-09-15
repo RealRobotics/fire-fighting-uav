@@ -8,10 +8,10 @@
 #include "ros/ros.h"
 #include "uav_msgs/BatteryStatus.h"
 
-class IsBatteryOk : public BT::ConditionNode {
+class IsBatteryRequiredStatus : public BT::ConditionNode {
 
 public:
-  IsBatteryOk(const std::string & instance_name, const BT::NodeConfiguration & conf,
+  IsBatteryRequiredStatus(const std::string & instance_name, const BT::NodeConfiguration & conf,
               ros::NodeHandle& nh);
 
   BT::NodeStatus tick() override;
@@ -28,6 +28,7 @@ private:
   ros::Subscriber battery_status_sub_;
   std::mutex status_mtx_;
   uint8_t current_status_ {uav_msgs::BatteryStatus::UNSET};
+  int required_status_ {uav_msgs::BatteryStatus::UNSET};
 
 };
 
