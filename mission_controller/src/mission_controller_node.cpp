@@ -1,4 +1,5 @@
 #include "mission_controller/fly_to_wp_bt_action.h"
+#include "mission_controller/is_battery_ok.h"
 
 #include "ros/ros.h"
 
@@ -6,6 +7,7 @@ static const char* xml_text = R"(
  <root >
      <BehaviorTree>
         <Sequence>
+          <IsBatteryOk />
           <FlyToWp server_name="FlyToWp" waypoint="5" />
         </Sequence>
      </BehaviorTree>
@@ -20,6 +22,7 @@ int main(int argc, char **argv) {
   BT::BehaviorTreeFactory factory;
 
   BT::RegisterRosAction<FlyToWpAction>(factory, "FlyToWp", nh);
+  IsBatteryOk::Register(factory, "IsBatteryOk", nh);
 
   auto tree = factory.createTreeFromText(xml_text);
 
