@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>mission_controller</name>
+  <version>1.0.0</version>
+  <description>The mission_controller is the main way how to control the behaviour of the drone. It utilises behaviour trees.</description>
+
+
+  <maintainer email="lenka@todo.todo">lenka</maintainer>
+
+
+  
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>uav_msgs</build_depend>
+  <build_depend>behaviortree_ros</build_depend>
+  <build_export_depend>std_msgs</build_export_depend>
+  <build_export_depend>uav_msgs</build_export_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>uav_msgs</exec_depend>
+  <exec_depend>behaviortree_ros</exec_depend>
+  <depend>behaviortree_cpp_v3</depend>
+  <depend>sensor_msgs</depend>
+  <depend>roscpp</depend>
+
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
