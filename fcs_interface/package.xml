@@ -14,7 +14,8 @@
   <depend>mbzirc_msgs</depend>
   <depend>dji_sdk</depend>
   <depend>uav_msgs</depend>
-
+  <depend>actionlib</depend>
+  <depend>actionlib_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

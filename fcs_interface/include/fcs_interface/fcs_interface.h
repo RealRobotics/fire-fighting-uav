@@ -1,8 +1,12 @@
 #ifndef FCS_INTERFACE_H
 #define FCS_INTERFACE_H
 
+#include <mutex> 
+
 #include <ros/ros.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <actionlib/server/simple_action_server.h>
+
 #include <mbzirc_msgs/LeedsCraneStatus.h>
 #include <dji_sdk/MissionWaypointTask.h>
 
@@ -10,6 +14,7 @@
 #include "uav_msgs/Land.h"
 #include "uav_msgs/ReturnHome.h"
 #include "uav_msgs/PrepareDrone.h"
+#include "uav_msgs/FlyToWPAction.h"
 
 class FCS_Interface
 {
@@ -60,7 +65,7 @@ public:
    * @param nav_sat_fix The waypoint to set.
    * @return true on success.
    */
-  bool setWaypoint(const sensor_msgs::NavSatFix& nav_sat_fix);
+  bool setWaypoint(const uav_msgs::FlyToWPGoalConstPtr &goal);
 
   /** Causes the drone to hold its current position and altitude.
    * Blocks until holding position (normally returns very quickly).
@@ -93,6 +98,7 @@ private:
   void setWaypointInitDefaults_(dji_sdk::MissionWaypointTask* waypointTask);
   bool uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix);
   bool waypointMissionAction_(WaypointAction action);
+  bool droneWithinRadius_(double radius, sensor_msgs::NavSatFix goal);
 
   bool loaded_ {false};
   ros::NodeHandle node_handle_;
@@ -104,12 +110,19 @@ private:
   ros::ServiceClient waypoint_upload_client_;
   sensor_msgs::NavSatFix gps_position_;
   ros::Subscriber gps_position_subscriber_;
-  ros::Subscriber crane_status_subscriber_;
+  
+  std::mutex position_mutex_;
+  
+  ros::Subscriber crane_status_subscriber_; //TODO check if this is needed here
 
   ros::ServiceServer prepare_service_;
   ros::ServiceServer takeoff_service_;
   ros::ServiceServer land_service_;
   ros::ServiceServer home_service_;
+  actionlib::SimpleActionServer<uav_msgs::FlyToWPAction> fly_server_;
+  std::string fly_action_name_ {"fcs/fly_to_wp"};
+  uav_msgs::FlyToWPFeedback fly_feedback_;
+  uav_msgs::FlyToWPResult fly_result_;
 };
 
 #endif //FCS_INTERFACE_H

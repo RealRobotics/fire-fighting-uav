@@ -1,5 +1,7 @@
 #include "fcs_interface/fcs_interface.h"
 
+#include <cmath>
+
 #include <ros/ros.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <dji_sdk/Activation.h>
@@ -17,7 +19,8 @@
 #define VELOCITY_RANGE_M_PER_S (5.0)
 
 FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
-: node_handle_(node_handle) {
+: node_handle_(node_handle), fly_server_(node_handle, fly_action_name_, boost::bind(&FCS_Interface::setWaypoint, this, _1), false)
+{
 }
 
 /** Start the OSDK client.
@@ -43,6 +46,8 @@ bool FCS_Interface::start()
   takeoff_service_ = node_handle_.advertiseService("fcs/take_off",  &FCS_Interface::takeOff, this);
   land_service_ = node_handle_.advertiseService("fcs/land",  &FCS_Interface::land, this);
   home_service_ = node_handle_.advertiseService("fcs/return_home",  &FCS_Interface::returnHome, this);
+  
+  fly_server_.start();
 
   ROS_INFO("Started FCS_Interface.");
    //TODO LEnka - think if this method can fail and if yes, when and return false
@@ -80,9 +85,11 @@ bool FCS_Interface::takeOff(uav_msgs::TakeOff::Request  &req,
     // location plus the requested altitude and upload that.
     //TODO Lenka - when is the gps_position_ initialised?
     sensor_msgs::NavSatFix nav_sat_fix;
+    position_mutex_.lock();
     nav_sat_fix.altitude = gps_position_.altitude + req.altitude;
     nav_sat_fix.latitude = gps_position_.latitude;
     nav_sat_fix.longitude = gps_position_.longitude;
+    position_mutex_.unlock();
     // Upload waypoint.
     result = uploadNavSatFix_(nav_sat_fix);
   }
@@ -111,11 +118,47 @@ bool FCS_Interface::returnHome(uav_msgs::ReturnHome::Request  &req,
   return result;
 }
 
-bool FCS_Interface::setWaypoint(const sensor_msgs::NavSatFix& nav_sat_fix)
+bool FCS_Interface::setWaypoint(const uav_msgs::FlyToWPGoalConstPtr &goal)
 {
+  sensor_msgs::NavSatFix nav_sat_fix = goal->goal_location;
   ROS_INFO("Sending waypoint: %f, %f, %f", nav_sat_fix.latitude, nav_sat_fix.longitude, nav_sat_fix.altitude);
   bool result = uploadNavSatFix_(nav_sat_fix);
-  return result;
+
+  if(!result) {
+    ROS_WARN("Request to fly to WP has failed");
+    fly_result_.in_location = false;
+    fly_server_.setAborted(fly_result_); //consider sending a text msg as well to differentiate the reasons
+  } else {
+    bool preempted {false};
+    ros::Duration feedback_period(0.1);
+    while(!droneWithinRadius_(goal->loc_precision, nav_sat_fix)) {
+      if(position_mutex_.try_lock()) {
+        fly_feedback_.current_location = gps_position_;
+        position_mutex_.unlock();
+        fly_server_.publishFeedback(fly_feedback_);
+      }
+
+      if(fly_server_.isPreemptRequested() || !ros::ok()) {
+        ROS_INFO("%s: Preempted", fly_action_name_.c_str());
+        fly_server_.setPreempted();
+        preempted = true;
+        break;
+      }
+
+      feedback_period.sleep();
+    }
+
+    if(!preempted)
+      {
+        fly_result_.in_location = true;
+        ROS_INFO("%s: Succeeded", fly_action_name_.c_str());
+        fly_server_.setSucceeded(fly_result_);
+      }
+      else{
+        ROS_WARN("%s: Preempted", fly_action_name_.c_str());
+      }
+   }
+   return result;
 }
 
 bool FCS_Interface::holdPosition()
@@ -194,7 +237,9 @@ bool FCS_Interface::droneTaskControl_(DroneTask task)
 
 void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message)
 {
+  position_mutex_.lock();
   gps_position_ = *message;
+  position_mutex_.unlock();
 }
 
 bool FCS_Interface::obtainControlAuthority_()
@@ -296,4 +341,16 @@ bool FCS_Interface::waypointMissionAction_(WaypointAction action)
     ROS_WARN("ack.data: %i", wp_action.response.ack_data);
   }
   return result;
+}
+
+bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goal) {
+
+  position_mutex_.lock();
+  double current_distance = sqrt(pow(goal.latitude - gps_position_.latitude,2) + pow(goal.longitude - gps_position_.longitude,2));
+  position_mutex_.unlock();
+  if (current_distance <= radius) {
+    return true;
+  } else {
+    return false;
+  }
 }

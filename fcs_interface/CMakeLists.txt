@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   dji_sdk
   uav_msgs
+  actionlib
+  actionlib_msgs
 )
 
 
@@ -109,7 +111,7 @@ find_package(DJIOSDK REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES mission_manager
-  CATKIN_DEPENDS mbzirc_msgs roscpp sensor_msgs std_msgs dji_sdk uav_msgs
+  CATKIN_DEPENDS mbzirc_msgs roscpp sensor_msgs std_msgs dji_sdk uav_msgs actionlib actionlib_msgs
 #  DEPENDS system_lib
 )
 
