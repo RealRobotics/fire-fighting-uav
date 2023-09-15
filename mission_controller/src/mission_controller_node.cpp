@@ -3,13 +3,15 @@
 
 #include "ros/ros.h"
 
+//TODO It would be great to save value to blackboard, such as BatteryStatus::OK and not have the number here
 static const char* xml_text = R"(
  <root >
      <BehaviorTree>
-        <Sequence>
-          <IsBatteryOk />
-          <FlyToWp server_name="FlyToWp" waypoint="5" />
-        </Sequence>
+        <KeepRunningUntilFailure>
+          <Inverter>
+            <IsBatteryOk required_status="2"/>
+          </Inverter>
+        </KeepRunningUntilFailure>
      </BehaviorTree>
  </root>
  )";
@@ -28,12 +30,14 @@ int main(int argc, char **argv) {
 
   BT::NodeStatus status = BT::NodeStatus::IDLE;
 
+  ROS_INFO("Mission controller on");
+
   while( ros::ok() && (status == BT::NodeStatus::IDLE || status == BT::NodeStatus::RUNNING))
   {
     ros::spinOnce();
     status = tree.tickRoot();
     std::cout << status << std::endl;
-    ros::Duration sleep_time(0.01);
+    ros::Duration sleep_time(1);
     sleep_time.sleep();
   }
 

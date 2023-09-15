@@ -28,6 +28,7 @@ private:
   ros::Subscriber battery_status_sub_;
   std::mutex status_mtx_;
   uint8_t current_status_ {uav_msgs::BatteryStatus::UNSET};
+  int required_status_ {uav_msgs::BatteryStatus::UNSET};
 
 };
 

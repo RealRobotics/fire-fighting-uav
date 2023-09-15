@@ -7,12 +7,13 @@ IsBatteryOk::IsBatteryOk(const std::string & instance_name, const BT::NodeConfig
   : BT::ConditionNode(instance_name, conf), nh_ (nh) {
   battery_status_sub_ = nh_.subscribe<uav_msgs::BatteryStatus>("battery_monitor/battery_status", 10,
                                                                             &IsBatteryOk::batteryStatusCallback_, this);
+  getInput<int>("required_status", required_status_);
 }
 
 
 BT::NodeStatus IsBatteryOk::tick() {
   status_mtx_.lock();
-  if (current_status_ == uav_msgs::BatteryStatus::OK) {
+  if (current_status_ == required_status_) {
     status_mtx_.unlock();
     return BT::NodeStatus::SUCCESS;
   } else {
@@ -28,7 +29,7 @@ void IsBatteryOk::batteryStatusCallback_(const uav_msgs::BatteryStatus::ConstPtr
 }
 
 BT::PortsList IsBatteryOk:: providedPorts() {
-  return BT::PortsList();
+  return {BT::InputPort<uint8_t>("required_status")};
 }
 
 /// Method to register the service into a factory.
