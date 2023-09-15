@@ -1,5 +1,5 @@
 #include "mission_controller/fly_to_wp_bt_action.h"
-#include "mission_controller/is_battery_ok.h"
+#include "mission_controller/is_battery_required_status.h"
 
 #include "ros/ros.h"
 
@@ -9,7 +9,7 @@ static const char* xml_text = R"(
      <BehaviorTree>
         <KeepRunningUntilFailure>
           <Inverter>
-            <IsBatteryOk required_status="2"/>
+            <IsBatteryRequiredStatus required_status="2"/>
           </Inverter>
         </KeepRunningUntilFailure>
      </BehaviorTree>
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
   BT::BehaviorTreeFactory factory;
 
   BT::RegisterRosAction<FlyToWpAction>(factory, "FlyToWp", nh);
-  IsBatteryOk::Register(factory, "IsBatteryOk", nh);
+  IsBatteryRequiredStatus::Register(factory, "IsBatteryRequiredStatus", nh);
 
   auto tree = factory.createTreeFromText(xml_text);
 
