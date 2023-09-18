@@ -1,6 +1,8 @@
 #include "fcs_interface/fcs_interface.h"
 
+#include <chrono>
 #include <cmath>
+#include <future>  
 
 #include <ros/ros.h>
 #include <sensor_msgs/NavSatFix.h>
@@ -19,7 +21,8 @@
 #define VELOCITY_RANGE_M_PER_S (5.0)
 
 FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
-: node_handle_(node_handle), fly_server_(node_handle, fly_action_name_, boost::bind(&FCS_Interface::setWaypoint, this, _1), false)
+: node_handle_(node_handle), fly_server_(node_handle, fly_action_name_, boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
+  special_mv_server_(node_handle, special_mv_action_name_, boost::bind(&FCS_Interface::specialMovement_, this, _1), false)
 {
 }
 
@@ -43,11 +46,9 @@ bool FCS_Interface::start()
   //crane_status_subscriber_ = node_handle_.subscribe("leeds_crane/status", 100, &OsdkClient::craneStatusCallback, this);
 
   prepare_service_ = node_handle_.advertiseService("fcs/prepare_drone",  &FCS_Interface::getReady, this);
-  takeoff_service_ = node_handle_.advertiseService("fcs/take_off",  &FCS_Interface::takeOff, this);
-  land_service_ = node_handle_.advertiseService("fcs/land",  &FCS_Interface::land, this);
-  home_service_ = node_handle_.advertiseService("fcs/return_home",  &FCS_Interface::returnHome, this);
   
   fly_server_.start();
+  special_mv_server_.start();
 
   ROS_INFO("Started FCS_Interface.");
    //TODO LEnka - think if this method can fail and if yes, when and return false
@@ -73,52 +74,66 @@ bool FCS_Interface::getReady(uav_msgs::PrepareDrone::Request  &req,
   return result;
 }
 
-bool FCS_Interface::takeOff(uav_msgs::TakeOff::Request  &req, 
-  uav_msgs::TakeOff::Response &res)
-{
-  ROS_INFO("Taking off to %f metres.", req.altitude);
-  // Get off the ground.
-  bool result = droneTaskControl_(kTaskTakeOff);
-  if (result)
-  {
-    // Now that we have taken off, create nav_sat_fix using the current GPS
-    // location plus the requested altitude and upload that.
-    //TODO Lenka - when is the gps_position_ initialised?
-    sensor_msgs::NavSatFix nav_sat_fix;
-    position_mutex_.lock();
-    nav_sat_fix.altitude = gps_position_.altitude + req.altitude;
-    nav_sat_fix.latitude = gps_position_.latitude;
-    nav_sat_fix.longitude = gps_position_.longitude;
-    position_mutex_.unlock();
-    // Upload waypoint.
-    result = uploadNavSatFix_(nav_sat_fix);
+bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal) {
+  std::future<bool> result;
+  switch(goal->movement) {
+    case uav_msgs::SpecialMovementGoal::TAKE_OFF:
+      ROS_INFO("Taking off...");
+      result = std::async(&FCS_Interface::droneTaskControl_,this, kTaskTakeOff);
+      break;
+    case uav_msgs::SpecialMovementGoal::LAND:
+      ROS_INFO("Landing...");
+      result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskLand);
+      break;
+    case uav_msgs::SpecialMovementGoal::GO_HOME:
+      ROS_INFO("Returning home...");
+      result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskGoHome);
+      break;
   }
-  else
-  {
-    ROS_WARN("Take off failed");
+
+  bool preempted {false};
+  while(result.wait_for(std::chrono::milliseconds(100)) != std::future_status::ready) {
+    special_mv_feedback_.current_location = sensor_msgs::NavSatFix();
+    special_mv_feedback_.altitude = 0;
+
+    if(position_mutex_.try_lock()) {
+      special_mv_feedback_.current_location = gps_position_;
+      position_mutex_.unlock();
+    }
+    if(altitude_mutex_.try_lock()) {
+      special_mv_feedback_.altitude = altitude_;
+      altitude_mutex_.unlock();
+    }
+
+    special_mv_server_.publishFeedback(special_mv_feedback_);
+
+    if(special_mv_server_.isPreemptRequested() || !ros::ok()) {
+      ROS_INFO("%s: Preempted", special_mv_action_name_.c_str());
+      special_mv_server_.setPreempted();
+      preempted = true;
+      break;
+    }
   }
-  res.result = result;
-  return result;
+
+  if(!preempted) {
+    if(!result.get()) {
+      ROS_WARN("Request for special movement has failed");
+      special_mv_result_.done = false;
+      special_mv_server_.setAborted(special_mv_result_); //consider sending a text msg as well to differentiate the reasons
+      return false;
+    } else {
+      special_mv_result_.done = true;
+      ROS_INFO("%s: Succeeded", special_mv_action_name_.c_str());
+      special_mv_server_.setSucceeded(special_mv_result_);
+      return true;
+    }
+  } else {
+    ROS_WARN("%s: Preempted", fly_action_name_.c_str());
+    return false;
+  }
 }
 
-bool FCS_Interface::land(uav_msgs::Land::Request  &req, 
-  uav_msgs::Land::Response &res)
-{
-  ROS_INFO("Landing...");
-  bool result = droneTaskControl_(kTaskLand);
-  res.result = result;
-  return result;
-}
-
-bool FCS_Interface::returnHome(uav_msgs::ReturnHome::Request  &req, 
-  uav_msgs::ReturnHome::Response &res) {
-  ROS_INFO("Returning home...");
-  bool result = droneTaskControl_(kTaskGoHome);
-  res.result = result;
-  return result;
-}
-
-bool FCS_Interface::setWaypoint(const uav_msgs::FlyToWPGoalConstPtr &goal)
+bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
 {
   sensor_msgs::NavSatFix nav_sat_fix = goal->goal_location;
   ROS_INFO("Sending waypoint: %f, %f, %f", nav_sat_fix.latitude, nav_sat_fix.longitude, nav_sat_fix.altitude);
@@ -132,6 +147,7 @@ bool FCS_Interface::setWaypoint(const uav_msgs::FlyToWPGoalConstPtr &goal)
     bool preempted {false};
     ros::Duration feedback_period(0.1);
     while(!droneWithinRadius_(goal->loc_precision, nav_sat_fix)) {
+      fly_feedback_.current_location = sensor_msgs::NavSatFix();
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;
         position_mutex_.unlock();
