@@ -4,6 +4,8 @@
 #include "ros/ros.h"
 
 //TODO It would be great to save value to blackboard, such as BatteryStatus::OK and not have the number here
+//Ha, it is just a string, so I can connect multiple strings together!
+//but even better, load the string form a file -> and then, I would need the value from blackboard
 static const char* xml_text = R"(
  <root >
      <BehaviorTree>

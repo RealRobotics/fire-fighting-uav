@@ -20,15 +20,12 @@ set(MSG_FILES
 
 add_service_files(
   FILES
-  TakeOff.srv
-  Land.srv
-  ReturnHome.srv
   PrepareDrone.srv
 )
 
 add_action_files(
   DIRECTORY action
-  FILES FlyToWP.action
+  FILES FlyToWP.action SpecialMovement.action
 )
 
 add_message_files(DIRECTORY msg FILES ${MSG_FILES})
