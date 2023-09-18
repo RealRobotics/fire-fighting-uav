@@ -1,17 +1,20 @@
 #include "mission_controller/fly_to_wp_bt_action.h"
+#include "mission_controller/special_movement_bt_action.h"
 #include "mission_controller/is_battery_required_status.h"
 
 #include "ros/ros.h"
 
 //TODO It would be great to save value to blackboard, such as BatteryStatus::OK and not have the number here
+//Ha, it is just a string, so I can connect multiple strings together!
+//but even better, load the string form a file -> and then, I would need the value from blackboard
 static const char* xml_text = R"(
- <root >
+ <root>
      <BehaviorTree>
-        <KeepRunningUntilFailure>
-          <Inverter>
-            <IsBatteryRequiredStatus required_status="2"/>
-          </Inverter>
-        </KeepRunningUntilFailure>
+        <Sequence>
+          <SpecialMovementBTAction type_of_action="1"/>
+          <IsBatteryRequiredStatus required_status="3"/>
+          <SpecialMovementBTAction type_of_action="2"/>
+        </Sequence>
      </BehaviorTree>
  </root>
  )";
@@ -23,7 +26,8 @@ int main(int argc, char **argv) {
 
   BT::BehaviorTreeFactory factory;
 
-  BT::RegisterRosAction<FlyToWpAction>(factory, "FlyToWp", nh);
+  //BT::RegisterRosAction<FlyToWpBTAction>(factory, "FlyToWp", nh);
+  BT::RegisterRosAction<SpecialMovementBTAction>(factory, "SpecialMovement", nh);
   IsBatteryRequiredStatus::Register(factory, "IsBatteryRequiredStatus", nh);
 
   auto tree = factory.createTreeFromText(xml_text);
