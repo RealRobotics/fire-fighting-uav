@@ -1,12 +1,12 @@
-#ifndef FLY_TO_WP_ACTION_H
-#define FLY_TO_WP_ACTION_H
+#ifndef FLY_TO_WP_BT_ACTION_H
+#define FLY_TO_WP_BT_ACTION_H
 
 #include "behaviortree_ros/bt_action_node.h"
 #include "uav_msgs/FlyToWPAction.h"
 
-class FlyToWpAction : public BT::RosActionNode<uav_msgs::FlyToWPAction>{
+class FlyToWpBTAction : public BT::RosActionNode<uav_msgs::FlyToWPAction>{
  public:
-  FlyToWpAction(ros::NodeHandle& handle, const std::string& name, const BT::NodeConfiguration & conf);
+  FlyToWpBTAction(ros::NodeHandle& handle, const std::string& name, const BT::NodeConfiguration & conf);
   static BT::PortsList providedPorts();
   bool sendGoal(GoalType& goal) override;
   void halt() override;
@@ -16,4 +16,4 @@ class FlyToWpAction : public BT::RosActionNode<uav_msgs::FlyToWPAction>{
  private:
 };
 
-#endif //FLY_TO_WP_ACTION_H
+#endif //FLY_TO_WP_BT_ACTION_H
