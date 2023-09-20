@@ -11,7 +11,6 @@
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
-  <depend>mbzirc_msgs</depend>
   <depend>dji_sdk</depend>
   <depend>uav_msgs</depend>
   <depend>actionlib</depend>
