@@ -124,13 +124,17 @@ bool FCS_Interface::droneTaskControl_(DroneTask task) {
 
 bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal) {
   std::future<bool> result;
+  double desired_height;
+
   switch(goal->movement) {
     case uav_msgs::SpecialMovementGoal::TAKE_OFF:
       ROS_INFO("Taking off...");
+      desired_height = take_off_height_;
       result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskTakeOff);
       break;
     case uav_msgs::SpecialMovementGoal::LAND:
       ROS_INFO("Landing...");
+      desired_height = 0;
       result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskLand);
       break;
     case uav_msgs::SpecialMovementGoal::GO_HOME:
@@ -140,7 +144,11 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   }
 
   bool preempted {false};
-  while(result.wait_for(std::chrono::milliseconds(100)) != std::future_status::ready) {
+  position_mutex_.lock();
+  double current_height = gps_position_.altitude;
+  position_mutex_.unlock();
+
+  while((std::abs(current_height-desired_height) > height_precision_) && (ros::ok())) {
 
     if(position_mutex_.try_lock()) {
       special_mv_feedback_.current_location = gps_position_;
@@ -154,6 +162,10 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
       preempted = true;
       break;
     }
+
+    position_mutex_.lock();
+    current_height = gps_position_.altitude;
+    position_mutex_.unlock();
   }
 
   if(!preempted) {

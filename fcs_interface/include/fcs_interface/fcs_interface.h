@@ -87,6 +87,10 @@ private:
   uav_msgs::FlyToWPResult fly_result_;
   uav_msgs::SpecialMovementFeedback special_mv_feedback_;
   uav_msgs::SpecialMovementResult special_mv_result_;
+
+  const double take_off_height_ {1.2};
+  const double height_precision_ {0.05};
+
 };
 
 #endif //FCS_INTERFACE_H
