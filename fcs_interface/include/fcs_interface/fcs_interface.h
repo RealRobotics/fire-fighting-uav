@@ -77,7 +77,7 @@ private:
   double altitude_ {0.0};
   
   std::mutex position_mutex_;
-  std::mutex altitude_mutex_;
+  std::mutex home_mutex_;
   
   actionlib::SimpleActionServer<uav_msgs::SpecialMovementAction> special_mv_server_;
   actionlib::SimpleActionServer<uav_msgs::FlyToWPAction> fly_server_;
@@ -90,6 +90,8 @@ private:
 
   const double take_off_height_ {1.2};
   const double height_precision_ {0.05};
+  sensor_msgs::NavSatFix home_location_;
+  bool home_position_initialised_ {false};
 
 };
 
