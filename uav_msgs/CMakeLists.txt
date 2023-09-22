@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 set(MSG_FILES
   BatteryStatus.msg
   InputAccepted.msg
+  SpecialMovement.msg
 )
 
 add_service_files(
