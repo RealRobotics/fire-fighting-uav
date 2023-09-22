@@ -1,6 +1,7 @@
 #include "mission_controller/special_movement_bt_action.h"
 
 #include "uav_msgs/SpecialMovementAction.h"
+#include "uav_msgs/SpecialMovement.h"
 
 SpecialMovementBTAction::SpecialMovementBTAction(ros::NodeHandle& handle, const std::string& name, const BT::NodeConfiguration & conf)
 : BT::RosActionNode<uav_msgs::SpecialMovementAction>(handle, name, conf){}
@@ -10,7 +11,7 @@ BT::PortsList SpecialMovementBTAction::providedPorts() {
 }
 
 bool SpecialMovementBTAction::sendGoal(GoalType& goal){
-  if(!getInput<uint8_t>("type_of_action", goal.movement))
+  if(!getInput<uav_msgs::SpecialMovement>("type_of_action", goal.movement))
   {
     // abort the entire action. Result in a FAILURE
     return false;

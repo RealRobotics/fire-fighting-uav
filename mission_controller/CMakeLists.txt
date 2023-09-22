@@ -138,7 +138,12 @@ FIND_LIBRARY(man_LIBRARIES jsoncpp /usr/include/jsoncpp)
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/mission_controller_node.cpp src/fly_to_wp_bt_action.cpp src/is_battery_required_status.cpp src/special_movement_bt_action.cpp)
+add_executable(${PROJECT_NAME}_node 
+src/mission_controller_node.cpp 
+src/mission_controller.cpp
+src/fly_to_wp_bt_action.cpp 
+src/is_battery_required_status.cpp 
+src/special_movement_bt_action.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
