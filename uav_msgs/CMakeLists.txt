@@ -17,6 +17,7 @@ set(MSG_FILES
   BatteryStatus.msg
   InputAccepted.msg
   SpecialMovement.msg
+  BatteryPercentage.msg
 )
 
 add_service_files(

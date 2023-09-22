@@ -3,12 +3,12 @@
 
 #include <ros/ros.h>
 
-#include "sensor_msgs/BatteryState.h"
 #include "std_msgs/Bool.h"
 #include "std_msgs/String.h"
 
 #include "uav_msgs/BatteryStatus.h"
 #include "uav_msgs/InputAccepted.h"
+#include "uav_msgs/BatteryPercentage.h"
 
 ros::Publisher battery_status_pub;
 ros::Publisher input_status_pub;
@@ -21,19 +21,19 @@ constexpr int8_t kMaxBatteryLevel {100};
 //min percentage level for the battery, technically drones should never return number smaller than 0 but it doesnt hurt to make this code safe
 constexpr int8_t kMinBatteryLevel {0};
 
-void BatteryCallback(const sensor_msgs::BatteryState::ConstPtr& msg)
+void BatteryCallback(const uav_msgs::BatteryPercentage::ConstPtr& msg)
 {
   uav_msgs::InputAccepted msg2;
   msg2.data = true;
-  msg2.input_msg_id = msg->header.seq;
+  msg2.input_msg_id = msg->input_msg_id;
   input_status_pub.publish(msg2);
 
   uav_msgs::BatteryStatus output_msg;
-  output_msg.input_msg_id = msg->header.seq;
+  output_msg.input_msg_id = msg->input_msg_id;
   output_msg.status = uav_msgs::BatteryStatus::UNSET;
 
   if ((safety_threshold != -1) && (mission_threshold != -1)) { //the thresholds must be set for the status to be published
-    int8_t current_battery {(int8_t)round(msg->percentage*100)};
+    int8_t current_battery = msg->percentage;
 
     if ((current_battery > mission_threshold) && (current_battery <= kMaxBatteryLevel)){
       output_msg.status = uav_msgs::BatteryStatus::OK;
