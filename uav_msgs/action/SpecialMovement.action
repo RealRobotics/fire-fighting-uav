@@ -10,4 +10,3 @@ bool done
 ---
 #feedback
 sensor_msgs/NavSatFix current_location
-float64 altitude
