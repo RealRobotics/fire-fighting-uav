@@ -22,7 +22,8 @@ set(MSG_FILES
 
 add_service_files(
   FILES
-  PrepareDrone.srv
+  EnableMission.srv
+  DisableMission.srv
 )
 
 add_action_files(
