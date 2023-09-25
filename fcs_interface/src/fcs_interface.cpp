@@ -1,4 +1,5 @@
 #include "fcs_interface/fcs_interface.h"
+#include "uav_msgs/SpecialMovement.h"
 
 #include <chrono>
 #include <cmath>
@@ -131,25 +132,21 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   std::future<bool> result;
   double desired_height;
 
-  switch(goal->movement) {
-    case uav_msgs::SpecialMovementGoal::TAKE_OFF:
-      ROS_INFO("Taking off...");
-      home_mutex_.lock();
-      desired_height = home_location_.altitude + take_off_height_;
-      home_mutex_.unlock();
-      result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskTakeOff);
-      break;
-    case uav_msgs::SpecialMovementGoal::LAND:
-      ROS_INFO("Landing...");
-      home_mutex_.lock();
-      desired_height = home_location_.altitude;
-      home_mutex_.unlock();
-      result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskLand);
-      break;
-    case uav_msgs::SpecialMovementGoal::GO_HOME:
-      ROS_INFO("Returning home...");
-      result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskGoHome);
-      break;
+  if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
+    ROS_INFO("Taking off...");
+    home_mutex_.lock();
+    desired_height = home_location_.altitude + take_off_height_;
+    home_mutex_.unlock();
+    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskTakeOff);
+  } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
+    ROS_INFO("Landing...");
+    home_mutex_.lock();
+    desired_height = home_location_.altitude;
+    home_mutex_.unlock();
+    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskLand);
+  } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
+    ROS_INFO("Returning home...");
+    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskGoHome);
   }
 
   bool preempted {false};
