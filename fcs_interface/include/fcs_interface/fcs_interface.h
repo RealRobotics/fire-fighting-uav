@@ -9,6 +9,7 @@
 #include <actionlib/server/simple_action_server.h>
 
 #include <dji_sdk/MissionWaypointTask.h>
+#include <djiosdk/dji_vehicle.hpp>
 
 #include "uav_msgs/FlyToWPAction.h"
 #include "uav_msgs/SpecialMovementAction.h"
@@ -51,14 +52,18 @@ private:
   bool specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal);
   bool setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal);
 
-  void convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix, dji_sdk::MissionWaypoint* waypoint);
-  void setWaypointInitDefaults_(dji_sdk::MissionWaypointTask* waypointTask);
+  void convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix, dji_sdk::MissionWaypoint & waypoint);
+  void setWaypointInitDefaults_(dji_sdk::MissionWaypointTask & waypointTask);
   bool uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix);
   bool waypointMissionAction_(WaypointAction action);
   bool droneWithinRadius_(double radius, sensor_msgs::NavSatFix goal);
 
   void gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message);
   void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
+
+  std::vector<DJI::OSDK::WayPointSettings>
+  createWaypoints(int numWaypoints, float64_t distanceIncrement,
+                float32_t start_alt);
 
   ros::NodeHandle node_handle_;
   ros::ServiceClient control_authority_client_;
