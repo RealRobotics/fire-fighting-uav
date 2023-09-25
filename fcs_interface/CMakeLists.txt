@@ -149,6 +149,9 @@ set(SERVER_SOURCES
 add_executable(${PROJECT_NAME}_node ${SERVER_SOURCES})
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+add_executable(${PROJECT_NAME}_dummy_node src/dummy_main.cpp src/dummy_fcs_interface.cpp)
+add_dependencies(${PROJECT_NAME}_dummy_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -169,6 +172,12 @@ target_link_libraries(
   ${catkin_LIBRARIES}
   ${DJIOSDK_LIBRARIES}
 )
+
+target_link_libraries(
+  ${PROJECT_NAME}_dummy_node
+  ${catkin_LIBRARIES}
+)
+
 
 #############
 ## Install ##
