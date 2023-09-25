@@ -71,9 +71,9 @@ void MissionController::loadBatteryLimits_() {
 }
 
 void MissionController::loadSpecialMovementsCmds_() {
-  blackboard_->set("take_off", uav_msgs::SpecialMovement::TAKE_OFF);
-  blackboard_->set("land", uav_msgs::SpecialMovement::LAND);
-  blackboard_->set("go_home", uav_msgs::SpecialMovement::GO_HOME);
+  blackboard_->set("take_off", uint8_t(uav_msgs::SpecialMovement::TAKE_OFF));
+  blackboard_->set("land", uint8_t(uav_msgs::SpecialMovement::LAND));
+  blackboard_->set("go_home", uint8_t(uav_msgs::SpecialMovement::GO_HOME));
 }
 
 void MissionController::run() {

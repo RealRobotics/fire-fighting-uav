@@ -6,7 +6,7 @@
 static const char* xml_text = R"(
  <root>
      <BehaviorTree>
-      <FlyToWpBTAction server_name="FlyToWp" waypoint="0.7"/>
+      <SpecialMovementBTAction server_name="/fcs/special_movement" type_of_action="{take_off}"/>
      </BehaviorTree>
  </root>
  )";
