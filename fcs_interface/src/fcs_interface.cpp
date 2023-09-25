@@ -1,10 +1,10 @@
 #include "fcs_interface/fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
-#include "uav_msgs/BatteryPercentage.h"
 
 #include <chrono>
 #include <cmath>
-#include <future>  
+#include <future> 
+#include <vector> 
 
 #include <ros/ros.h>
 #include <sensor_msgs/NavSatFix.h>
@@ -42,7 +42,7 @@ bool FCS_Interface::start() {
                                                                             &FCS_Interface::batteryStateCallback_, this);
 
   //set up publishing topics
-  battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
+  battery_state_publisher_ = node_handle_.advertise<sensor_msgs::BatteryState>("fcs_interface/battery_state", 10);
 
   //start the action servers
   fly_server_.start();
@@ -236,40 +236,123 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
 }
 
 //TODO replace the pointer here by eithere reference or smart pointer, or consider it as the output value
-void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix, dji_sdk::MissionWaypoint* waypoint) {
+void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix, dji_sdk::MissionWaypoint & waypoint) {
   // Convert the nav_sat_fix to a mission waypoint.
   // From demo_mission::uploadWaypoints()
-  waypoint->latitude = nav_sat_fix.latitude;
-  waypoint->longitude = nav_sat_fix.longitude;
-  waypoint->altitude = nav_sat_fix.altitude;
-  waypoint->damping_distance = 0;
-  waypoint->target_yaw = 0;
-  waypoint->target_gimbal_pitch = 0;
-  waypoint->turn_mode = 0;
-  waypoint->has_action = 0;
-  ROS_INFO("Waypoint created at: %f \t%f \t%f\n ", waypoint->latitude, waypoint->longitude, waypoint->altitude);
+  waypoint.latitude = nav_sat_fix.latitude;
+  waypoint.longitude = nav_sat_fix.longitude;
+  waypoint.altitude = nav_sat_fix.altitude;
+  waypoint.damping_distance = 0;
+  waypoint.target_yaw = 0;
+  waypoint.target_gimbal_pitch = 0;
+  waypoint.turn_mode = 0;
+  waypoint.has_action = 0;
+  ROS_INFO("Waypoint created at: %f \t%f \t%f\n ", waypoint.latitude, waypoint.longitude, waypoint.altitude);
 }
 
-//TODO replace the pointer here by eithere reference or smart pointer, or consider it as the output value
-void FCS_Interface::setWaypointInitDefaults_(dji_sdk::MissionWaypointTask* waypointTask) {
-  waypointTask->velocity_range = 10;
-  waypointTask->idle_velocity = 5;
-  waypointTask->action_on_finish = dji_sdk::MissionWaypointTask::FINISH_NO_ACTION;
-  waypointTask->mission_exec_times = 1;
-  waypointTask->yaw_mode = dji_sdk::MissionWaypointTask::YAW_MODE_AUTO;
-  waypointTask->trace_mode = dji_sdk::MissionWaypointTask::TRACE_POINT;
-  waypointTask->action_on_rc_lost = dji_sdk::MissionWaypointTask::ACTION_AUTO;
-  waypointTask->gimbal_pitch_mode = dji_sdk::MissionWaypointTask::GIMBAL_PITCH_FREE;
+void FCS_Interface::setWaypointInitDefaults_(dji_sdk::MissionWaypointTask & waypointTask) {
+  waypointTask.velocity_range = 10;
+  waypointTask.idle_velocity = 5;
+  waypointTask.action_on_finish = dji_sdk::MissionWaypointTask::FINISH_NO_ACTION;
+  waypointTask.mission_exec_times = 1;
+  waypointTask.yaw_mode = dji_sdk::MissionWaypointTask::YAW_MODE_AUTO;
+  waypointTask.trace_mode = dji_sdk::MissionWaypointTask::TRACE_POINT;
+  waypointTask.action_on_rc_lost = dji_sdk::MissionWaypointTask::ACTION_AUTO;
+  waypointTask.gimbal_pitch_mode = dji_sdk::MissionWaypointTask::GIMBAL_PITCH_FREE;
+}
+
+void
+setWaypointDefaults(WayPointSettings* wp)
+{
+  wp->damping         = 0;
+  wp->yaw             = 0;
+  wp->gimbalPitch     = 0;
+  wp->turnMode        = 0;
+  wp->hasAction       = 0;
+  wp->actionTimeLimit = 100;
+  wp->actionNumber    = 0;
+  wp->actionRepeat    = 0;
+  for (int i = 0; i < 16; ++i)
+  {
+    wp->commandList[i]      = 0;
+    wp->commandParameter[i] = 0;
+  }
+}
+
+
+std::vector<DJI::OSDK::WayPointSettings>
+generateWaypointsPolygon(WayPointSettings* start_data, float64_t increment,
+                         int num_wp)
+{
+  // Let's create a vector to store our waypoints in.
+  std::vector<DJI::OSDK::WayPointSettings> wp_list;
+
+  // Some calculation for the polygon
+  float64_t extAngle = 2 * M_PI / num_wp;
+
+  // First waypoint
+  start_data->index = 0;
+  wp_list.push_back(*start_data);
+
+  // Iterative algorithm
+  for (int i = 1; i < num_wp; i++)
+  {
+    WayPointSettings  wp;
+    WayPointSettings* prevWp = &wp_list[i - 1];
+    setWaypointDefaults(&wp);
+    wp.index     = i;
+    wp.latitude  = (prevWp->latitude + (increment * cos(i * extAngle)));
+    wp.longitude = (prevWp->longitude + (increment * sin(i * extAngle)));
+    wp.altitude  = (prevWp->altitude + 1);
+    wp_list.push_back(wp);
+  }
+
+  // Come back home
+  start_data->index = num_wp;
+  wp_list.push_back(*start_data);
+
+  return wp_list;
+}
+
+std::vector<DJI::OSDK::WayPointSettings>
+FCS_Interface::createWaypoints(int numWaypoints, float64_t distanceIncrement,
+                float32_t start_alt)
+{
+  // Create Start Waypoint
+  WayPointSettings start_wp;
+  setWaypointDefaults(&start_wp);
+  //TODO add pos mutex
+  start_wp.latitude  = gps_position_.latitude;
+  start_wp.longitude = gps_position_.longitude;
+  start_wp.altitude  = start_alt;
+  ROS_INFO("Waypoint created at (LLA): %f \t%f \t%f\n", gps_position_.latitude,
+           gps_position_.longitude, start_alt);
+
+  std::vector<DJI::OSDK::WayPointSettings> wpVector =
+    generateWaypointsPolygon(&start_wp, distanceIncrement, numWaypoints);
+  return wpVector;
 }
 
 bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) {
   bool result = false;
   // Waypoint Mission : Initialization
   dji_sdk::MissionWaypointTask waypointTask;
-  setWaypointInitDefaults_(&waypointTask);
-  dji_sdk::MissionWaypoint waypoint;
-  convertToWaypoint_(nav_sat_fix, &waypoint);
-  waypointTask.mission_waypoint.push_back(waypoint);
+  setWaypointInitDefaults_(waypointTask);
+
+  float64_t increment = 0.000001 / M_PI * 180;
+  float32_t start_alt = 10;
+  ROS_INFO("Creating Waypoints..\n");
+  int numWaypoints {5};
+  std::vector<WayPointSettings> generatedWaypts =
+    createWaypoints(numWaypoints, increment, start_alt);
+
+  for (std::vector<WayPointSettings>::iterator wp = generatedWaypts.begin();
+       wp != generatedWaypts.end(); ++wp)
+  {
+    dji_sdk::MissionWaypoint waypoint;
+    convertToWaypoint_(nav_sat_fix, waypoint);
+    waypointTask.mission_waypoint.push_back(waypoint);
+  }
   // Initialise the waypoint mission.
   dji_sdk::MissionWpUpload missionWaypointUpload;
   missionWaypointUpload.request.waypoint_task = waypointTask;
@@ -350,10 +433,5 @@ void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr&
 }
 
 void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
-  static int id = 0;
-  uav_msgs::BatteryPercentage new_msg;
-  new_msg.input_msg_id = id;
-  new_msg.percentage = std::round(message->percentage);
-  battery_state_publisher_.publish(new_msg);
-  id++;
+  battery_state_publisher_.publish(*message);
 }
