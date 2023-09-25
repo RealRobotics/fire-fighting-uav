@@ -6,15 +6,21 @@
 static const char* xml_text = R"(
  <root>
      <BehaviorTree>
-        <KeepRunningUntilFailure>
-          <Inverter>
-            <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
-          </Inverter>
-        </KeepRunningUntilFailure>
+      <FlyToWpBTAction server_name="FlyToWp" waypoint="0.7"/>
      </BehaviorTree>
  </root>
  )";
-
+//<SpecialMovementBTAction type_of_action="{take_off}"/>
+/*
+ <Inverter>
+            <KeepRunningUntilFailure>
+              <Inverter>
+                <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+              </Inverter>
+            </KeepRunningUntilFailure>
+          </Inverter>
+          <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+          */
 int main(int argc, char **argv) {
   if(argc < 2) {
     ROS_WARN("You must provide path to a file with a search pattern");
@@ -22,11 +28,9 @@ int main(int argc, char **argv) {
   }
   ros::init(argc, argv, "mission_controller");
   ros::NodeHandle nh;  
-  MissionController mission_controller = MissionController(nh, xml_text, std::string(argv[1]));  
+  MissionController mission_controller = MissionController(nh, xml_text, std::string(argv[1])); 
+  mission_controller.run(); 
 
-  while(ros::ok()) {
-    ros::spinOnce();
-    ros::Duration(0.1).sleep();
-  }
+  ros::spin();
   return 0;
 }

@@ -9,6 +9,7 @@
 #include "mission_controller/fly_to_wp_bt_action.h"
 #include "mission_controller/special_movement_bt_action.h"
 #include "mission_controller/is_battery_required_status.h"
+#include "mission_controller/is_mission_enabled.h"
 
 MissionController::MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file) 
  : nh_(nh) {
@@ -19,14 +20,16 @@ MissionController::MissionController(ros::NodeHandle nh, std::string tree_file, 
  }
 
 void MissionController::registerNodes_() {
-  //BT::RegisterRosAction<FlyToWpBTAction>(factory_, "FlyToWp", nh_);
-  BT::RegisterRosAction<SpecialMovementBTAction>(factory_, "SpecialMovement", nh_);
+  BT::RegisterRosAction<FlyToWpBTAction>(factory_, "FlyToWpBTAction", nh_);
+  BT::RegisterRosAction<SpecialMovementBTAction>(factory_, "SpecialMovementBTAction", nh_);
   IsBatteryRequiredStatus::Register(factory_, "IsBatteryRequiredStatus", nh_);
+  IsMissionEnabled::Register(factory_, "IsMissionEnabled", nh_);
 }
 
 void MissionController::createTree_(std::string tree_file, std::string waypoints_file) {
   tree_ = factory_.createTreeFromText(tree_file); //TODO change from text to from file
   blackboard_ = tree_.rootBlackboard();
+  blackboard_->set("mission_enabled", false);
   loadWaypoints_(waypoints_file);
   loadBatteryLimits_();
   loadSpecialMovementsCmds_();  
@@ -88,15 +91,16 @@ void MissionController::run() {
   }
 }
 
-//TODO ensure that this doesnt get triggered if a tree is already running
-//TODO test if this service call returns immediately
 bool MissionController::enableMission_(uav_msgs::EnableMission::Request  &req,
   uav_msgs::EnableMission::Response &res) {
-  std::async(&MissionController::run,this);
+  blackboard_->set("mission_enabled", true);
+  res.result = true;
   return true;
 }
 
 bool MissionController::disableMission_(uav_msgs::DisableMission::Request  &req,
   uav_msgs::DisableMission::Response &res) {
+  blackboard_->set("mission_enabled", false);
+  res.result = true;
   return true;
 }

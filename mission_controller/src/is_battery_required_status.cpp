@@ -15,13 +15,16 @@ BT::NodeStatus IsBatteryRequiredStatus::tick() {
   status_mtx_.lock();
   if (current_status_ == uav_msgs::BatteryStatus::UNSET) {
     status_mtx_.unlock();
+    ROS_INFO("IsBatteryRequiredStatus: FAILURE");
     return BT::NodeStatus::FAILURE;
   }
   if (current_status_ == required_status_) {
     status_mtx_.unlock();
+    ROS_INFO("IsBatteryRequiredStatus: SUCCESS");
     return BT::NodeStatus::SUCCESS;
   } else {
     status_mtx_.unlock();
+    ROS_INFO("IsBatteryRequiredStatus: FAILURE");
     return BT::NodeStatus::FAILURE;
   }
 }

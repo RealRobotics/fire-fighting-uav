@@ -143,7 +143,8 @@ src/mission_controller_node.cpp
 src/mission_controller.cpp
 src/fly_to_wp_bt_action.cpp 
 src/is_battery_required_status.cpp 
-src/special_movement_bt_action.cpp)
+src/special_movement_bt_action.cpp
+src/is_mission_enabled.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

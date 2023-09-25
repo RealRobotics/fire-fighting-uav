@@ -12,6 +12,7 @@
 class MissionController {
 public:
   MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file);
+  void run();
 
 private:
   void registerNodes_();
@@ -24,7 +25,6 @@ private:
     uav_msgs::EnableMission::Response &res);
   bool disableMission_(uav_msgs::DisableMission::Request  &req,
     uav_msgs::DisableMission::Response &res);
-  void run();
 
   ros::NodeHandle nh_;
   ros::ServiceServer enable_service_;
