@@ -1,4 +1,5 @@
 #include "fcs_interface/fcs_interface.h"
+#include "uav_msgs/SpecialMovement.h"
 
 #include <chrono>
 #include <cmath>
@@ -14,7 +15,6 @@
 #include <dji_sdk/SDKControlAuthority.h>
 #include <dji_sdk/SetLocalPosRef.h>
 #include <djiosdk/dji_vehicle.hpp>
-#include <mbzirc_msgs/LeedsCraneStatus.h>
 
 #define UNLADEN_VELOCITY_M_PER_S (2.0)
 #define LADEN_VELOCITY_M_PER_S (1.0)
@@ -47,9 +47,18 @@ bool FCS_Interface::start() {
   fly_server_.start();
   special_mv_server_.start();
   
-  //finally activate the drone and get control
+  //finally activate the drone, get control and wait for the home_location to be initialised (i.e. obtain first gps location)
   bool result = getReady_();
   if (result) {
+    while(ros::ok()) {
+      home_mutex_.lock();
+      if (home_position_initialised_) {
+        break;
+      }
+      home_mutex_.unlock();
+      ros::Duration(0.1).sleep();
+      ROS_INFO("Waiting to obtain first gps reading");
+    }
     ROS_INFO("Started FCS_Interface.");
   }
   return result;
@@ -90,9 +99,6 @@ bool FCS_Interface::getReady_() {
   bool result = activate_();
   if (result) {
     result = obtainControlAuthority_();
-    if (result) {
-      ROS_INFO("FCS_Interface is ready for action!");
-    }
   }
   return result;
 }
@@ -126,29 +132,29 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   std::future<bool> result;
   double desired_height;
 
-  switch(goal->movement) {
-    case uav_msgs::SpecialMovementGoal::TAKE_OFF:
-      ROS_INFO("Taking off...");
-      desired_height = take_off_height_;
-      result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskTakeOff);
-      break;
-    case uav_msgs::SpecialMovementGoal::LAND:
-      ROS_INFO("Landing...");
-      desired_height = 0;
-      result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskLand);
-      break;
-    case uav_msgs::SpecialMovementGoal::GO_HOME:
-      ROS_INFO("Returning home...");
-      result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskGoHome);
-      break;
+  if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
+    ROS_INFO("Taking off...");
+    home_mutex_.lock();
+    desired_height = home_location_.altitude + take_off_height_;
+    home_mutex_.unlock();
+    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskTakeOff);
+  } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
+    ROS_INFO("Landing...");
+    home_mutex_.lock();
+    desired_height = home_location_.altitude;
+    home_mutex_.unlock();
+    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskLand);
+  } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
+    ROS_INFO("Returning home...");
+    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskGoHome);
   }
 
   bool preempted {false};
   position_mutex_.lock();
-  double current_height = gps_position_.altitude;
+  double height_error = std::abs(desired_height - gps_position_.altitude);
   position_mutex_.unlock();
 
-  while((std::abs(current_height-desired_height) > height_precision_) && (ros::ok())) {
+  while( (height_error > height_precision_) && ros::ok()) {
 
     if(position_mutex_.try_lock()) {
       special_mv_feedback_.current_location = gps_position_;
@@ -164,7 +170,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
     }
 
     position_mutex_.lock();
-    current_height = gps_position_.altitude;
+    height_error = std::abs(desired_height - gps_position_.altitude);
     position_mutex_.unlock();
   }
 
@@ -200,7 +206,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
     bool preempted {false};
     ros::Duration feedback_period(0.1);
     while(!droneWithinRadius_(goal->loc_precision, nav_sat_fix)) {
-      fly_feedback_.current_location = sensor_msgs::NavSatFix();
+
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;
         position_mutex_.unlock();
@@ -328,6 +334,15 @@ bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goa
 
 //TODO use gps health to trust the data only if health is good
 void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message) {
+  static int num_runs = 0;
+  if (num_runs == 0) {
+    home_mutex_.lock();
+    home_location_ = *message;
+    home_position_initialised_ = true;
+    home_mutex_.unlock();
+    num_runs++;
+  } 
+
   position_mutex_.lock();
   gps_position_ = *message;
   position_mutex_.unlock();

@@ -1,0 +1,11 @@
+{
+  "num_waypoints": 2,
+  "wp0": {
+    "latitude": 5,
+    "longitude": 4
+  }, 
+  "wp1": {
+    "latitude": 7,
+    "longitude": 4
+  }
+}

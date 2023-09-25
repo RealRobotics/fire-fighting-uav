@@ -128,6 +128,8 @@ include_directories(
 #   src/${PROJECT_NAME}/mission_controller.cpp
 # )
 
+FIND_LIBRARY(man_LIBRARIES jsoncpp /usr/include/jsoncpp)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -136,7 +138,13 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/mission_controller_node.cpp src/fly_to_wp_bt_action.cpp src/is_battery_required_status.cpp src/special_movement_bt_action.cpp)
+add_executable(${PROJECT_NAME}_node 
+src/mission_controller_node.cpp 
+src/mission_controller.cpp
+src/fly_to_wp_bt_action.cpp 
+src/is_battery_required_status.cpp 
+src/special_movement_bt_action.cpp
+src/is_mission_enabled.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,6 +159,7 @@ add_executable(${PROJECT_NAME}_node src/mission_controller_node.cpp src/fly_to_w
 ## Specify libraries to link a library or executable target against
  target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES}
+   ${man_LIBRARIES}
  )
 
 #############

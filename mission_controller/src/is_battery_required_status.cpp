@@ -7,17 +7,24 @@ IsBatteryRequiredStatus::IsBatteryRequiredStatus(const std::string & instance_na
   : BT::ConditionNode(instance_name, conf), nh_ (nh) {
   battery_status_sub_ = nh_.subscribe<uav_msgs::BatteryStatus>("battery_monitor/battery_status", 10,
                                                                             &IsBatteryRequiredStatus::batteryStatusCallback_, this);
-  getInput<int>("required_status", required_status_);
 }
 
 
 BT::NodeStatus IsBatteryRequiredStatus::tick() {
+  getInput<int>("required_status", required_status_);
   status_mtx_.lock();
+  if (current_status_ == uav_msgs::BatteryStatus::UNSET) {
+    status_mtx_.unlock();
+    ROS_INFO("IsBatteryRequiredStatus: FAILURE");
+    return BT::NodeStatus::FAILURE;
+  }
   if (current_status_ == required_status_) {
     status_mtx_.unlock();
+    ROS_INFO("IsBatteryRequiredStatus: SUCCESS");
     return BT::NodeStatus::SUCCESS;
   } else {
     status_mtx_.unlock();
+    ROS_INFO("IsBatteryRequiredStatus: FAILURE");
     return BT::NodeStatus::FAILURE;
   }
 }

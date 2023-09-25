@@ -16,11 +16,14 @@ find_package(catkin REQUIRED COMPONENTS
 set(MSG_FILES
   BatteryStatus.msg
   InputAccepted.msg
+  SpecialMovement.msg
+  BatteryPercentage.msg
 )
 
 add_service_files(
   FILES
-  PrepareDrone.srv
+  EnableMission.srv
+  DisableMission.srv
 )
 
 add_action_files(
