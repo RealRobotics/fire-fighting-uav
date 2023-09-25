@@ -1,5 +1,6 @@
 #include "fcs_interface/fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
+#include "uav_msgs/BatteryPercentage.h"
 
 #include <chrono>
 #include <cmath>
@@ -41,7 +42,7 @@ bool FCS_Interface::start() {
                                                                             &FCS_Interface::batteryStateCallback_, this);
 
   //set up publishing topics
-  battery_state_publisher_ = node_handle_.advertise<sensor_msgs::BatteryState>("fcs_interface/battery_state", 10);
+  battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
   //start the action servers
   fly_server_.start();
@@ -349,5 +350,10 @@ void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr&
 }
 
 void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
-  battery_state_publisher_.publish(*message);
+  static int id = 0;
+  uav_msgs::BatteryPercentage new_msg;
+  new_msg.input_msg_id = id;
+  new_msg.percentage = std::round(message->percentage);
+  battery_state_publisher_.publish(new_msg);
+  id++;
 }
