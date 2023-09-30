@@ -11,12 +11,12 @@ BT::PortsList SpecialMovementBTAction::providedPorts() {
 }
 
 bool SpecialMovementBTAction::sendGoal(GoalType& goal){
-  if(!getInput<uav_msgs::SpecialMovement>("type_of_action", goal.movement))
+  if(!getInput<uint8_t>("type_of_action", goal.movement.data))
   {
     // abort the entire action. Result in a FAILURE
     return false;
   }
-  ROS_INFO("Sending goal request");
+  ROS_INFO("Sending goal request: %d", goal.movement.data);
   return true;
 }
 
@@ -28,6 +28,10 @@ void SpecialMovementBTAction::halt(){
 }
 
 BT::NodeStatus SpecialMovementBTAction::onResult( const ResultType& res){
+  uint8_t type_of_action;
+
+  getInput<uint8_t>("type_of_action", type_of_action);
+  ROS_INFO("Special movement action %d has succeeded", type_of_action);
   return BT::NodeStatus::SUCCESS;
 }
 
