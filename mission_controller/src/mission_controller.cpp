@@ -10,24 +10,26 @@
 #include "mission_controller/special_movement_bt_action.h"
 #include "mission_controller/is_battery_required_status.h"
 #include "mission_controller/is_mission_enabled.h"
+#include "mission_controller/repeat_over_vector.h"
 
 MissionController::MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file) 
  : nh_(nh) {
   registerNodes_();
   createTree_(tree_file, waypoints_file);
-  enable_service_ = nh.advertiseService("enable_mission", &MissionController::enableMission_,this);
-  disable_service_ = nh.advertiseService("disable_mission", &MissionController::disableMission_,this);
- }
+  enable_service_ = nh.advertiseService("mission_controller/enable_mission", &MissionController::enableMission_,this);
+  disable_service_ = nh.advertiseService("mission_controller/disable_mission", &MissionController::disableMission_,this);
+}
 
 void MissionController::registerNodes_() {
   BT::RegisterRosAction<FlyToWpBTAction>(factory_, "FlyToWpBTAction", nh_);
   BT::RegisterRosAction<SpecialMovementBTAction>(factory_, "SpecialMovementBTAction", nh_);
   IsBatteryRequiredStatus::Register(factory_, "IsBatteryRequiredStatus", nh_);
   IsMissionEnabled::Register(factory_, "IsMissionEnabled", nh_);
+  RepeatOverVector::Register(factory_, "RepeatOverVector");
 }
 
 void MissionController::createTree_(std::string tree_file, std::string waypoints_file) {
-  tree_ = factory_.createTreeFromText(tree_file); //TODO change from text to from file
+  tree_ = factory_.createTreeFromFile(tree_file);
   blackboard_ = tree_.rootBlackboard();
   blackboard_->set("mission_enabled", false);
   loadWaypoints_(waypoints_file);
@@ -35,19 +37,12 @@ void MissionController::createTree_(std::string tree_file, std::string waypoints
   loadSpecialMovementsCmds_();  
 }
 
-void MissionController::saveWpToBlackboard_(Json::Value wp, std::string wp_name) {
-  sensor_msgs::NavSatFix gps_wp;
-  gps_wp.latitude = wp["latitude"].asDouble();
-  gps_wp.longitude = wp["longitude"].asDouble();
-
-  blackboard_->set(wp_name, gps_wp);
-}
-
 void MissionController::loadWaypoints_(std::string path) {
   std::ifstream search_pattern_file; 
-  search_pattern_file.open(__GNUC_PATCHLEVEL__);
+  search_pattern_file.open(path);
   Json::Value root;
   if (search_pattern_file.is_open()) {
+    ROS_INFO("Loading the search pattern.");
     Json::CharReaderBuilder builder;
     builder["collectComments"] = false;
     JSONCPP_STRING errs;
@@ -56,10 +51,18 @@ void MissionController::loadWaypoints_(std::string path) {
       return;
     } else {
       int num_waypoints = root["num_waypoints"].asInt();
-      for (uint i = 0; i << num_waypoints; ++i) {
+      blackboard_->set("num_waypoints", num_waypoints);
+      ROS_INFO("There are %d waypoints to load.", num_waypoints);
+      std::vector<sensor_msgs::NavSatFix> waypoints;
+      for (uint i = 0; i < num_waypoints; ++i) {
         std::string wp = "wp" + std::to_string(i);
-        saveWpToBlackboard_(root[wp], wp);
+        sensor_msgs::NavSatFix gps_wp;
+        gps_wp.latitude = root[wp]["latitude"].asDouble();
+        gps_wp.longitude = root[wp]["longitude"].asDouble();
+        blackboard_->set(wp, gps_wp);
+        waypoints.push_back(gps_wp);
       }
+      blackboard_->set("waypoint_list", waypoints);
     }
   }
 }

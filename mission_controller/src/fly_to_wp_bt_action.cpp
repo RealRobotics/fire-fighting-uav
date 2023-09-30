@@ -7,18 +7,17 @@ FlyToWpBTAction::FlyToWpBTAction(ros::NodeHandle& handle, const std::string& nam
 : BT::RosActionNode<uav_msgs::FlyToWPAction>(handle, name, conf){}
 
 BT::PortsList FlyToWpBTAction::providedPorts() {
-  //return {InputPort<sensor_msgs::NavSatFix>("waypoint")};
-  return {BT::InputPort<double>("waypoint")};  
+  return {BT::InputPort<sensor_msgs::NavSatFix>("waypoint"), BT::InputPort<int>("num_waypoints")};  
 }
 
 bool FlyToWpBTAction::sendGoal(GoalType& goal){
-  //if(!getInput<sensor_msgs::NavSatFix>("waypoint", goal.current_location))
-  if(!getInput<double>("waypoint", goal.goal_location.latitude))
+  if(!getInput<sensor_msgs::NavSatFix>("waypoint", goal.goal_location))
   {
+    ROS_INFO("no input");
     // abort the entire action. Result in a FAILURE
     return false;
   }
-  ROS_INFO("Sending goal request");
+  ROS_INFO("Sending goal request with latitude %f and longitude %f", goal.goal_location.latitude, goal.goal_location.longitude);
   return true;
 }
 

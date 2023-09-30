@@ -1,0 +1,12 @@
+<root>
+    <BehaviorTree>
+      <RepeatOverVector vector="{waypoint_list}" next_waypoint="{current_waypoint}">
+        <ReactiveFallback>
+          <Inverter>
+            <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+          </Inverter>
+          <FlyToWpBTAction server_name="/fcs/fly_to_wp" waypoint="{current_waypoint}"/>
+        </ReactiveFallback>
+      </RepeatOverVector>
+     </BehaviorTree>
+ </root>

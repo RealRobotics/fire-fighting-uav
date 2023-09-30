@@ -17,7 +17,6 @@ public:
 private:
   void registerNodes_();
   void createTree_(std::string tree_file, std::string waypoints_file);
-  void saveWpToBlackboard_(Json::Value wp, std::string wp_name);
   void loadWaypoints_(std::string path);
   void loadBatteryLimits_();
   void loadSpecialMovementsCmds_();

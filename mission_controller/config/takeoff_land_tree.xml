@@ -1,0 +1,24 @@
+<root>
+    <BehaviorTree>
+      <Sequence>
+        <Inverter>
+          <KeepRunningUntilFailure>
+            <Inverter>
+              <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+            </Inverter>
+          </KeepRunningUntilFailure>
+        </Inverter>
+        <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+        <SpecialMovementBTAction server_name="/fcs/special_movement" type_of_action="{take_off}"/>
+        <Inverter>
+          <KeepRunningUntilFailure>
+            <Sequence>
+              <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+              <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+            </Sequence>
+          </KeepRunningUntilFailure>
+        </Inverter>
+        <SpecialMovementBTAction server_name="/fcs/special_movement" type_of_action="{land}"/>
+      </Sequence>
+     </BehaviorTree>
+ </root>
