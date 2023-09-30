@@ -41,9 +41,10 @@ bool DummyFCS_Interface::start() {
     }
     home_mutex_.unlock();
     ros::Duration(0.1).sleep();
+    ros::spinOnce();
     ROS_INFO("Waiting to obtain first gps reading");
   }
-  ROS_INFO("Started FCS_Interface.");
+  ROS_INFO("Started dummy FCS_Interface.");
   
   return true;
 }
