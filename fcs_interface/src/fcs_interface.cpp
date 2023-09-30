@@ -51,15 +51,16 @@ bool FCS_Interface::start() {
   //finally activate the drone, get control and wait for the home_location to be initialised (i.e. obtain first gps location)
   bool result = getReady_();
   if (result) {
-   /*while(ros::ok()) {
+   while(ros::ok()) {
       home_mutex_.lock();
       if (home_position_initialised_) {
         break;
       }
       home_mutex_.unlock();
+      ros::spinOnce();
       ros::Duration(0.1).sleep();
       ROS_INFO("Waiting to obtain first gps reading");
-    }*/
+    }
     ROS_INFO("Started FCS_Interface.");
   }
   return result;
