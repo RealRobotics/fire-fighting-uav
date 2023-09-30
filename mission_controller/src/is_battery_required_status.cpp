@@ -15,8 +15,8 @@ BT::NodeStatus IsBatteryRequiredStatus::tick() {
   status_mtx_.lock();
   if (current_status_ == uav_msgs::BatteryStatus::UNSET) {
     status_mtx_.unlock();
-    ROS_INFO("IsBatteryRequiredStatus: FAILURE");
-    return BT::NodeStatus::FAILURE;
+    ROS_INFO("IsBatteryRequiredStatus: RUNNING due battery unset");
+    return BT::NodeStatus::RUNNING;
   }
   if (current_status_ == required_status_) {
     status_mtx_.unlock();
@@ -24,7 +24,7 @@ BT::NodeStatus IsBatteryRequiredStatus::tick() {
     return BT::NodeStatus::SUCCESS;
   } else {
     status_mtx_.unlock();
-    ROS_INFO("IsBatteryRequiredStatus: FAILURE");
+    ROS_INFO("IsBatteryRequiredStatus: FAILURE due wrong status");
     return BT::NodeStatus::FAILURE;
   }
 }
