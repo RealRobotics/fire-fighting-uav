@@ -145,7 +145,7 @@ src/fly_to_wp_bt_action.cpp
 src/is_battery_required_status.cpp 
 src/special_movement_bt_action.cpp
 src/is_mission_enabled.cpp
-src/repeat_over_vector.cpp)
+src/repeat_over_vector_until_failure.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
