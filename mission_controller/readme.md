@@ -69,9 +69,9 @@ Before requesting fcs_interface action to take off, we need to check if the two 
 
 ### Is battery <req_status>?
 
--returns SUCCESS when the current battery status provided by battery monitor is equal to req_status
--returns FAILURE otherwise
--returns RUNNING when the battery monitor hasn't published status yet
+- returns SUCCESS when the current battery status provided by battery monitor is equal to req_status
+- returns FAILURE otherwise
+- returns RUNNING when the battery monitor hasn't published status yet
 
 **Implementation**
 
