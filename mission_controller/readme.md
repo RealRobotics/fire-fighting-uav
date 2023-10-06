@@ -22,11 +22,19 @@ This scenario is supported by the **monitoring_scenario.xml**
 
 ### Scenario tree explanation
 
-The main behaviour of this case study is a sequence of four steps: 
-![Four main steps of scenario](img/mission_behaviour_1.png)
+The main behaviour of this case study is a sequence of four steps. After each step SUCCEESed, the next step is triggered to run.
+![Four main steps of scenario](doc/mission_behaviour_1.png)
 
+However, due to complexity of each step, there are trees themselves. 
 
-After each step SUCCEESed, the next step is triggered to run.
+**Wait for enable signal from ground station**
+
+**Take off**
+
+**Fly**
+
+**Land**
+
 
 Next, we can add the start and stop signals from the ground station:
 
