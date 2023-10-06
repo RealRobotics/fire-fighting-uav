@@ -1,0 +1,5 @@
+<launch>
+ <include file="$(find mission_controller)/launch/mission_controller.launch"/>
+ <node pkg="fcs_interface" name="fcs_interface_dummy_node" type="fcs_interface_dummy_node" output="screen"/>
+ <include file="$(find battery_monitor)/launch/battery_monitor.launch"/>
+</launch>
