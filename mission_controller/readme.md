@@ -29,11 +29,36 @@ However, due to complexity of each step, there are trees themselves.
 
 **Wait for enable signal from ground station**
 
+I have implemented a version of a *condition node* in order to check if mission control has been enabled by the ground station. The class is called IsMissionEnabled and the condition node returns SUCCESS when it is enabled. 
+
+The tree "Wait for enable signal from ground station" could look like this
+![ideal tree for "wait for enable signal"](doc/wait_for_signal_1.png)
+
+However, the BehaviourTree.Cpp library doesn't offer *Repeat until success* decorator node. It offers only *Repeat until failure* node. Hence, we need to add two inverters:
+![real tree for "wait for enable signal"](doc/wait_for_signal_2.png)
+
 **Take off**
+
+Before requesting fcs_interface action to take off, we need to check if the two end conditions hasn't occured.
+
+![Take off tree with checking two conditions](doc/take_off.png)
 
 **Fly**
 
+Similarly, before requesting the drone to fly to a waypoint, we need to check the end conditions too. Additionally, there are several waypoints over which the drone is suppose to patrol. Therefore, I have developed a new *decorator* node called *RepeatOverVectorUntilFailure*. This node takes a vector of waypoints as its input *port* and iterates over them until one of its childs return failure. 
+
+![Fly tree with checking two conditions](doc/fly_wp.png)
+
+
 **Land**
+
+For the land, we need to check only the condition if mission controller is enabled. We don't need to check the battery, as the land action will be requested only if the battery is low.
+
+![Land tree with checking only enable condition](doc/land.png)
+
+**The complete tree**
+
+![Complete tree](doc/mission_behaviour.png)
 
 
 Next, we can add the start and stop signals from the ground station:
