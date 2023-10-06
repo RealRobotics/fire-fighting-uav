@@ -20,9 +20,10 @@ This scenario is supported by the **monitoring_scenario.xml**
 - the drone will perform "star" pattern on waypoints; this mean that the drone will fly from its home location to the wp and then return to its home location before flying to another wp. This is due limitations of dji_sdk library which doesn't allow to fly to a single wp but requires a set of minimal three of them, when the first and the last needs to be home locations
 - it is assumed in this file, that actions of the drone cannot be interrupted (this is due limitations of FCS interface). You can check **interuptable_monitoring_scenario.xml** for an example of an extended tree which would handle if actions are interruptable. However, this file hasn't been tested so it may contain mistakes.
 
-Behaviour tree
+### Scenario tree explanation
 
 The main behaviour of this case study is a sequence of four steps: 
+![Four main steps of scenario](img/mission_behaviour_1.png)
 
 
 After each step SUCCEESed, the next step is triggered to run.
