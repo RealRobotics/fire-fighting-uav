@@ -1,0 +1,5 @@
+<launch>
+    <arg name="search_pattern" default="$(find mission_controller)/config/search_pattern.json" />
+    <arg name="bt" default="$(find mission_controller)/config/monitoring_scenario.xml" />
+    <node name="mission_controller" pkg="mission_controller" type="mission_controller_node" output="screen" args="$(arg search_pattern) $(arg bt)"/>
+</launch>

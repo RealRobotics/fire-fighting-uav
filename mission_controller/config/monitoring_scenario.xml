@@ -1,0 +1,36 @@
+<root>
+    <BehaviorTree>
+      <Sequence>
+        <Inverter>
+          <KeepRunningUntilFailure>
+            <Inverter>
+              <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+            </Inverter>
+          </KeepRunningUntilFailure>
+        </Inverter>
+        <Sequence>
+          <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+          <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+          <SpecialMovementBTAction server_name="/fcs/special_movement" type_of_action="{take_off}"/>
+        </Sequence>
+        <Fallback>
+          <RepeatOverVectorUntilFailure vector="{waypoint_list}" next_waypoint="{current_waypoint}">
+            <Sequence>
+              <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+              <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+              <FlyToWpBTAction server_name="/fcs/fly_to_wp" waypoint="{current_waypoint}"/>
+            </Sequence>
+          </RepeatOverVectorUntilFailure>
+          <Sequence>
+            <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
+            <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+            <SpecialMovementBTAction server_name="/fcs/special_movement" type_of_action="{go_home}"/>
+          </Sequence>
+          <Sequence>
+            <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+            <SpecialMovementBTAction server_name="/fcs/special_movement" type_of_action="{land}"/>
+          </Sequence>
+        </Fallback>  
+      </Sequence>
+     </BehaviorTree>
+ </root>

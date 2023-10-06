@@ -10,7 +10,7 @@
 #include "mission_controller/special_movement_bt_action.h"
 #include "mission_controller/is_battery_required_status.h"
 #include "mission_controller/is_mission_enabled.h"
-#include "mission_controller/repeat_over_vector.h"
+#include "mission_controller/repeat_over_vector_until_failure.h"
 
 MissionController::MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file) 
  : nh_(nh) {
@@ -25,7 +25,7 @@ void MissionController::registerNodes_() {
   BT::RegisterRosAction<SpecialMovementBTAction>(factory_, "SpecialMovementBTAction", nh_);
   IsBatteryRequiredStatus::Register(factory_, "IsBatteryRequiredStatus", nh_);
   IsMissionEnabled::Register(factory_, "IsMissionEnabled", nh_);
-  RepeatOverVector::Register(factory_, "RepeatOverVector");
+  RepeatOverVectorUntilFailure::Register(factory_, "RepeatOverVectorUntilFailure");
 }
 
 void MissionController::createTree_(std::string tree_file, std::string waypoints_file) {

@@ -1,5 +1,5 @@
-#ifndef REPEAT_OVER_VECTOR_H
-#define REPEAT_OVER_VECTOR_H
+#ifndef REPEAT_OVER_VECTOR_UNTIL_FAILURE_H
+#define REPEAT_OVER_VECTOR_UNTIL_FAILURE_H
 
 #include <string>
 #include <vector>
@@ -8,15 +8,15 @@
 #include "behaviortree_cpp_v3/bt_factory.h"
 #include "sensor_msgs/NavSatFix.h"
 
-class RepeatOverVector : public BT::DecoratorNode
+class RepeatOverVectorUntilFailure : public BT::DecoratorNode
 {
 public:
   
-  RepeatOverVector(const std::string& name, std::vector<sensor_msgs::NavSatFix> vector);
+  RepeatOverVectorUntilFailure(const std::string& name, std::vector<sensor_msgs::NavSatFix> vector);
 
-  RepeatOverVector(const std::string& name, const BT::NodeConfiguration& config);
+  RepeatOverVectorUntilFailure(const std::string& name, const BT::NodeConfiguration& config);
 
-  virtual ~RepeatOverVector() override = default;
+  virtual ~RepeatOverVectorUntilFailure() override = default;
 
   static BT::PortsList providedPorts();
 
@@ -35,4 +35,4 @@ private:
   void halt() override;
 };
 
-#endif //REPEAT_OVER_VECTOR_H
+#endif //REPEAT_OVER_VECTOR_UNTIL_FAILURE_H
