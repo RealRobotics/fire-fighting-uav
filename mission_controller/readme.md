@@ -29,12 +29,14 @@ However, due to complexity of each step, there are trees themselves.
 
 **Wait for enable signal from ground station**
 
-I have implemented a version of a *condition node* in order to check if mission control has been enabled by the ground station. The class is called IsMissionEnabled and the condition node returns SUCCESS when it is enabled. 
+I have implemented a version of a *condition node* in order to check if mission control has been enabled by the ground station. The class is called *IsMissionEnabled* and the condition node returns SUCCESS when it is enabled, otherwise FAILURE.
 
-The tree "Wait for enable signal from ground station" could look like this
+The tree "Wait for enable signal from ground station" could look like this:
+
 ![ideal tree for "wait for enable signal"](doc/wait_for_signal_1.png)
 
-However, the BehaviourTree.Cpp library doesn't offer *Repeat until success* decorator node. It offers only *Repeat until failure* node. Hence, we need to add two inverters:
+The decorator "Repeat until success" will produce status RUNNING until the condition returns SUCCESS. However, the BehaviourTree.Cpp library doesn't offer *Repeat until success* decorator node. It offers only *Repeat until failure* node. Hence, we need to add two inverters:
+
 ![real tree for "wait for enable signal"](doc/wait_for_signal_2.png)
 
 **Take off**
@@ -61,10 +63,8 @@ For the land, we need to check only the condition if mission controller is enabl
 ![Complete tree](doc/mission_behaviour.png)
 
 
-Next, we can add the start and stop signals from the ground station:
+### Possible expansion when actions will be interruptible
 
-
-Notice, we have a new first step. This step consists of a decorator and a condition node (please refer to behaviour tree terminology if you are not sure about the meaning). The condition checks if the ground station requested start. It can return SUCCESS or FAILURE. The decorator above it will produce status RUNNING until the condition returns SUCCESS. As a result, the other nodes won’t be triggered until then. 
 
 The step fly changed too. It now consists of a reactive fallback, a condition and an action node. The working of there three nodes is as follows. First, the reactive fallbacks get triggered. Then, it triggers the condition “Has the ground station requested a stop?”. The outcome of a condition node is either SUCCESS or FAILURE. 
 In case of a SUCCESS, the reactive fallback will be SUCCESS too and the action node land will be triggered next.
@@ -74,11 +74,4 @@ In case of SUCCESS, the reactive fallback node returns SUCCESS too and the next 
 In case of FAILURE, the reactive fallback node returns FAILURE which gets propagated to the top node which returns FAILURE too and the whole scenario has failed.
 
 Now we can focus on the action Fly. It can be modelled as a subtree. We can start with a very simple tree:
-
-
-This calls the action Fly to WP (=waypoint) n times, where n is the number of waypoints. But we said, we want to keep repeating until the ground station requests a stop or the battery is low. Hence, the new subtree considering the ground station would look as follows. 
-
-We utilise a new decorator Keep Running Until Failure, which ensures that the action Fly to WP is called repeatedly. This tree will result in SUCCESS only when the condition Has ground station requested stop? will result in SUCCESS.
-
-However, we need to introduce how to pass a WP to the action Fly to WP. This is via ports. 
 
