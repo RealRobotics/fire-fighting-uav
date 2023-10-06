@@ -134,9 +134,35 @@ The same as for go home.
 
 ![Complete tree](doc/mission_behaviour.png)
 
+### How to test without a drone
+
+There is a launch file "dummy_mini_system_test.launch" in demos pkg which launches this mission controller, dummy fcs interface and battery monitor. 
+
+In terminals, run:
+1. `roslaunch demos dummy_mini_system_test.launch`
+2. `rostopic pub /dji_sdk/gps_position sensor_msgs/NavSatFix "header:
+  seq: 0
+  stamp: {secs: 0, nsecs: 0}
+  frame_id: ''
+status: {status: 0, service: 0}
+latitude: 0.0
+longitude: 0.0
+altitude: 0.0
+position_covariance: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+position_covariance_type: 0"` (This is needed that fcs_interface starts)
+
+Then, you want to play with:
+- calling a service `roservice call /mission_controller/enable_mission "{}"` to enable mission controller
+- calling a service `roservice call /mission_controller/disable_mission "{}"` to disable mission controller
+- publishing `rostopic pub /battery_monitor/battery_status uav_msgs/BatteryStatus "input_msg_id: 0
+status: 1" ` (see uav_msgs/msg/BatteryStatus for value corresponding to different statuses) (TODO: replace this by raw battery state when you expand dummy fcs interface)
+
+Sending the services/changing battery status would allow you to influence what parts of the tree are being executed.
+
 
 ### Possible expansion when actions will be interruptible
 
+TODO: clean the text below
 
 The step fly changed too. It now consists of a reactive fallback, a condition and an action node. The working of there three nodes is as follows. First, the reactive fallbacks get triggered. Then, it triggers the condition “Has the ground station requested a stop?”. The outcome of a condition node is either SUCCESS or FAILURE. 
 In case of a SUCCESS, the reactive fallback will be SUCCESS too and the action node land will be triggered next.
