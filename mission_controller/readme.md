@@ -5,7 +5,7 @@ In particular, it is based on c++ library called [BehaviorTree.Cpp](https://www.
 Before continuing to read the explanation below, please familiarise yourself with the semantics of behaviour trees.
 
 # Supported scenario
-One of the big adventages of behaviour trees is that they are easily configurable by a text file, which means the code can stay same for different scenarios.
+One of the big adventages of behaviour trees is that they are easily configurable by a text file, which means the code can stay the same for different scenarios.
 There is a folder **config** where you will find xml files, including example of behaviour trees.
 
 ## Monitoring scenario
@@ -22,10 +22,68 @@ This scenario is supported by the **monitoring_scenario.xml**
 
 ### Scenario tree explanation
 
-The main behaviour of this case study is a sequence of four steps. After each step SUCCEESed, the next step is triggered to run.
+The main behaviour of this case study is a sequence of four steps:
+1. check if ground control enabled mission controller
+2. take off
+3. keep flying until the battery is not OK
+4. handle the fact that battery is not OK
+
+The very high level behaviour tree can look like this:
+
 ![Four main steps of scenario](doc/mission_behaviour_1.png)
 
-However, due to complexity of each step, there are trees themselves. 
+Due to complexity of each node, there are trees themselves. We can define their high level behaviour.
+
+**Check if ground control enabled mission controller**
+- returns SUCCESS when mission controller is enabled
+- returns RUNNING when mission controller is disabled
+- returnf FAILURE when unexpected error occurs (this is not supported as of 06/10/2023)
+
+This node will not allow the execution of the tree to continue until the mission controller is enabled. After it is, the tree will move to the next node due to the fact that the root node is *sequence*.
+
+**Take off**
+- returns SUCCESS when the drone took of
+- returns RUNNING when the drone is taking off
+- returns FAILURE when:
+  - battery is not OK
+  - mission control is disabled
+  - unexpected error occur (this is not supported as of 06/10/2023)
+ 
+**Fallback**
+- this is standard fallback node
+- we use it here because when the keep flying node fails, we want to react to it by a recovery strategy "go home"; if that one would fail too, the drone will land
+
+**Keep flying over WPs**
+- never returns SUCCESS
+- returns RUNNING until a failure occurs
+- returns FAILURE when:
+  - battery is not OK
+  - mission control is disabled
+  - unexpected error occur (this is not supported as of 06/10/2023)
+ 
+**Is battery mission critical?**
+- returns SUCCESS when the battery monitor returns battery status MISSION_CRITICAL
+- returns FAILURE when the battery monitor returns either OK or SAFETY_CRITICAL
+- returns RUNNING if battery monitor hasn't published a status yet
+
+**Go home**
+- returns SUCCESS when the drone lands on the coordinates where it took off from
+- returns RUNNING when the drone is flying or landing
+- returns FAILURE:
+  - battery is not mission critical
+  - mission control is disabled
+  - unexpected error occur (this is not supported as of 06/10/2023)
+ 
+**Land**
+- returns SUCCESS when the drone lands
+- returns RUNNING when the drone is landing
+- returns FAILURE:
+  - mission control is disabled
+  - unexpected error occur (this is not supported as of 06/10/2023)
+
+
+
+
 
 **Wait for enable signal from ground station**
 
