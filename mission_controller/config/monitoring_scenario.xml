@@ -22,7 +22,7 @@
             </Sequence>
           </RepeatOverVectorUntilFailure>
           <Sequence>
-            <IsBatteryRequiredStatus required_status="{mission_critical}"/>
+            <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
             <IsMissionEnabled mission_enabled="{mission_enabled}"/>
             <SpecialMovementBTAction server_name="/fcs/special_movement" type_of_action="{go_home}"/>
           </Sequence>
