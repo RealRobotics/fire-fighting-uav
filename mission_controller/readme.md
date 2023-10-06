@@ -42,6 +42,7 @@ Due to complexity of each node, there are trees themselves. We can define their 
 This node will not allow the execution of the tree to continue until the mission controller is enabled. After it is, the tree will move to the next node due to the fact that the root node is *sequence*.
 
 **Implementation**
+
 I have implemented a version of a *condition node* in order to check if mission control has been enabled by the ground station. The class is called *IsMissionEnabled*. The condition node has an input port *mission_enabled* which is set from the class *MissionController* which processes ROS service call.
 
 The tree "Wait for enable signal from ground station" could look like this:
@@ -61,9 +62,20 @@ The decorator "Repeat until success" will produce status RUNNING until the condi
   - unexpected error occur (this is not supported as of 06/10/2023)
 
 **Implementation**
+
 Before requesting fcs_interface action to take off, we need to check if the two end conditions hasn't occured. The call to fcs_interfaction action is wrapped using the standard ROS wrapper provided by the BehaviourTree.cpp library. 
 
 ![Take off tree with checking two conditions](doc/take_off.png)
+
+### Is battery <req_status>?
+
+-returns SUCCESS when the current battery status provided by battery monitor is equal to req_status
+-returns FAILURE otherwise
+-returns RUNNING when the battery monitor hasn't published status yet
+
+**Implementation**
+
+I have implemented a condition node (IsBatteryRequiredStatus) which listens to a topic with the battery status. This condition node as an input *port* for defining the requested status. 
 
 ### Fallback
 - this is a standard fallback node
@@ -78,16 +90,21 @@ Before requesting fcs_interface action to take off, we need to check if the two 
   - unexpected error occur (this is not supported as of 06/10/2023)
  
 **Implementation**
+
 Before requesting the drone to fly to a waypoint, we need to check the end conditions too. Additionally, there are several waypoints over which the drone is suppose to patrol. Therefore, I have developed a new *decorator* node called *RepeatOverVectorUntilFailure*. This node takes a vector of waypoints as its input *port* and iterates over them until one of its childs return failure. The iteration is done using output port which passes the current waypoint to the *fly to wp* node which is again standard wrap of a ros action call. 
 
 ![Fly tree with checking two conditions](doc/fly_wp.png)
  
 ### Is battery mission critical?
+
 - returns SUCCESS when the battery monitor returns battery status MISSION_CRITICAL
 - returns FAILURE when the battery monitor returns either OK or SAFETY_CRITICAL
 - returns RUNNING if battery monitor hasn't published a status yet
 
-**Go home**
+**Implementation**
+This uses the node IsBatteryRequiredStatus with input port set to MISSION_CRITICAL.
+
+### Go home
 - returns SUCCESS when the drone lands on the coordinates where it took off from
 - returns RUNNING when the drone is flying or landing
 - returns FAILURE:
@@ -95,21 +112,25 @@ Before requesting the drone to fly to a waypoint, we need to check the end condi
   - mission control is disabled
   - unexpected error occur (this is not supported as of 06/10/2023)
  
-**Land**
+**Implementation**
+
+The two conditions have been explained above. The actions is a standard wrap to ros action call.
+ 
+### Land
 - returns SUCCESS when the drone lands
 - returns RUNNING when the drone is landing
 - returns FAILURE:
   - mission control is disabled
   - unexpected error occur (this is not supported as of 06/10/2023)
 
+For the land, we need to check only the condition if mission controller is enabled. We don't need to check the battery, as the land action will be requested only if the battery is safety critical.
 
-**Land**
-
-For the land, we need to check only the condition if mission controller is enabled. We don't need to check the battery, as the land action will be requested only if the battery is low.
+**Implementation**
+The same as for go home.
 
 ![Land tree with checking only enable condition](doc/land.png)
 
-**The complete tree**
+### The complete tree
 
 ![Complete tree](doc/mission_behaviour.png)
 
