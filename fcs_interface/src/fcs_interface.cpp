@@ -1,5 +1,6 @@
 #include "fcs_interface/fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
+#include "uav_msgs/BatteryPercentage.h"
 
 #include <chrono>
 #include <cmath>
@@ -22,8 +23,8 @@
 #define VELOCITY_RANGE_M_PER_S (5.0)
 
 FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
-: node_handle_(node_handle), fly_server_(node_handle, "fcs/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
-  special_mv_server_(node_handle, "fcs/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false) {
+: node_handle_(node_handle), fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
+  special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false) {
 }
 
 bool FCS_Interface::start() {
@@ -42,7 +43,7 @@ bool FCS_Interface::start() {
                                                                             &FCS_Interface::batteryStateCallback_, this);
 
   //set up publishing topics
-  battery_state_publisher_ = node_handle_.advertise<sensor_msgs::BatteryState>("fcs_interface/battery_state", 10);
+  battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
   //start the action servers
   fly_server_.start();
@@ -120,9 +121,7 @@ bool FCS_Interface::droneTaskControl_(DroneTask task) {
       droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_GOHOME;
       break;
   }
-  ROS_INFO("calling drone task client");
   drone_task_client_.call(droneTaskControl);
-  ROS_INFO("call ended");
   result = droneTaskControl.response.result;
   if (!result) {
     ROS_WARN("droneTaskControl failed.");
@@ -158,6 +157,8 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   double height_error = std::abs(desired_height - gps_position_.altitude);
   position_mutex_.unlock();
 
+  ros::Duration feedback_period(0.1);
+
   while( (height_error > height_precision_) && ros::ok()) {
 
     if(position_mutex_.try_lock()) {
@@ -176,6 +177,9 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
     position_mutex_.lock();
     height_error = std::abs(desired_height - gps_position_.altitude);
     position_mutex_.unlock();
+
+    feedback_period.sleep();
+    ros::spinOnce(); //TODO do i needd the spinning here?
   }
 
   if(!preempted) {
@@ -209,7 +213,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
   } else {
     bool preempted {false};
     ros::Duration feedback_period(0.1);
-    while(!droneWithinRadius_(goal->loc_precision, nav_sat_fix)) {
+    while(!droneWithinRadius_(goal->loc_precision, nav_sat_fix) && ros::ok()) {
 
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;
@@ -225,6 +229,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
       }
 
       feedback_period.sleep();
+      ros::spinOnce(); //TODO do i needd the spinning here?
     }
 
     if(!preempted) {
@@ -238,6 +243,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
   return result;
 }
 
+//TODO return the wp rather than using reference
 void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix, dji_sdk::MissionWaypoint & waypoint) {
   // Convert the nav_sat_fix to a mission waypoint.
   // From demo_mission::uploadWaypoints()
@@ -349,38 +355,56 @@ FCS_Interface::createWaypoints(int numWaypoints, float64_t distanceIncrement,
   return wpVector;
 }
 
+sensor_msgs::NavSatFix FCS_Interface::generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix) {
+  sensor_msgs::NavSatFix mid_wp;
+  position_mutex_.lock();
+  double latitude_diff = (nav_sat_fix.latitude - gps_position_.latitude)/2.0;
+  double longitude_diff = (nav_sat_fix.longitude - gps_position_.longitude)/2.0;
+  double altitude_diff = (nav_sat_fix.altitude - gps_position_.altitude)/2.0;
+  position_mutex_.unlock();
+
+  mid_wp.latitude = nav_sat_fix.latitude - latitude_diff;
+  mid_wp.longitude = nav_sat_fix.longitude - longitude_diff;
+  mid_wp.altitude = nav_sat_fix.altitude - altitude_diff;
+
+  return mid_wp;
+}
+
 bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) {
   bool result = false;
   // Waypoint Mission : Initialization
   dji_sdk::MissionWaypointTask waypointTask;
   setWaypointInitDefaults_(waypointTask);
 
-  //float64_t increment = 0.000001 / M_PI * 180;
-  
-  float64_t increment = 0.00001 / M_PI * 180;
+  //delete this code when done testing
+  /*float64_t increment = 0.00001 / M_PI * 180;
   float32_t start_alt = 10;
   ROS_INFO("Creating Waypoints..\n");
   int numWaypoints {3};
   std::vector<WayPointSettings> generatedWaypts =
     createWaypoints(numWaypoints, increment, start_alt);
 
-  dji_sdk::MissionWaypoint waypoint;
-  //position_mutex_.lock();
-  //convertToWaypoint_(gps_position_, waypoint);
-  //position_mutex_.unlock();
-    
-  //waypointTask.mission_waypoint.push_back(waypoint);
-
   for (std::vector<WayPointSettings>::iterator wp = generatedWaypts.begin();
        wp != generatedWaypts.end(); ++wp)
   {
-    
-    //convertToWaypoint_(nav_sat_fix, waypoint);
     WayPointSettings ws = *wp;
     convertWpSettingToWaypoint_(ws, waypoint);
     waypointTask.mission_waypoint.push_back(waypoint);
-    //waypointTask.mission_waypoint.push_back(waypoint);
-  }
+  }*/
+
+  dji_sdk::MissionWaypoint waypoint;
+  position_mutex_.lock();
+  convertToWaypoint_(gps_position_, waypoint);
+  position_mutex_.unlock();
+  waypointTask.mission_waypoint.push_back(waypoint);
+
+  convertToWaypoint_(generate_mid_point_(nav_sat_fix), waypoint);
+  waypointTask.mission_waypoint.push_back(waypoint);
+  
+  convertToWaypoint_(nav_sat_fix, waypoint);
+  waypointTask.mission_waypoint.push_back(waypoint);
+
+
   // Initialise the waypoint mission.
   dji_sdk::MissionWpUpload missionWaypointUpload;
   missionWaypointUpload.request.waypoint_task = waypointTask;
@@ -461,5 +485,10 @@ void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr&
 }
 
 void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
-  battery_state_publisher_.publish(*message);
+  static int num_runs = 0;
+  uav_msgs::BatteryPercentage msg;
+  msg.input_msg_id  = num_runs;
+  msg.percentage = int(message->percentage);
+  battery_state_publisher_.publish(msg);
+  num_runs++;
 }

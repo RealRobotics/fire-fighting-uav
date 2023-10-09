@@ -1,5 +1,6 @@
 #include "fcs_interface/dummy_fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
+#include "uav_msgs/BatteryPercentage.h"
 
 #include <chrono>
 #include <cmath>
@@ -13,8 +14,8 @@
 #define VELOCITY_RANGE_M_PER_S (5.0)
 
 DummyFCS_Interface::DummyFCS_Interface(ros::NodeHandle node_handle)
-: node_handle_(node_handle), fly_server_(node_handle, "fcs/fly_to_wp", boost::bind(&DummyFCS_Interface::setWaypoint_, this, _1), false),
-  special_mv_server_(node_handle, "fcs/special_movement", boost::bind(&DummyFCS_Interface::specialMovement_, this, _1), false) {
+: node_handle_(node_handle), fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&DummyFCS_Interface::setWaypoint_, this, _1), false),
+  special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&DummyFCS_Interface::specialMovement_, this, _1), false) {
 }
 
 bool DummyFCS_Interface::start() {
@@ -27,7 +28,7 @@ bool DummyFCS_Interface::start() {
                                                                             &DummyFCS_Interface::batteryStateCallback_, this);
 
   //set up publishing topics
-  battery_state_publisher_ = node_handle_.advertise<sensor_msgs::BatteryState>("fcs_interface/battery_state", 10);
+  battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
   //start the action servers
   fly_server_.start();
@@ -37,6 +38,7 @@ bool DummyFCS_Interface::start() {
   while(ros::ok()) {
     home_mutex_.lock();
     if (home_position_initialised_) {
+      home_mutex_.unlock();
       break;
     }
     home_mutex_.unlock();
@@ -156,5 +158,10 @@ void DummyFCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::Cons
 }
 
 void DummyFCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
-  battery_state_publisher_.publish(*message);
+    static int num_runs = 0;
+  uav_msgs::BatteryPercentage msg;
+  msg.input_msg_id  = num_runs;
+  msg.percentage = int(message->percentage);
+  battery_state_publisher_.publish(msg);
+  num_runs++;
 }

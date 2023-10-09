@@ -66,6 +66,8 @@ private:
   createWaypoints(int numWaypoints, float64_t distanceIncrement,
                 float32_t start_alt);
 
+  sensor_msgs::NavSatFix generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix);
+
   ros::NodeHandle node_handle_;
   ros::ServiceClient control_authority_client_;
   ros::ServiceClient drone_activation_client_;
