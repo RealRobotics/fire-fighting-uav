@@ -251,6 +251,20 @@ void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix
   ROS_INFO("Waypoint created at: %f \t%f \t%f\n ", waypoint.latitude, waypoint.longitude, waypoint.altitude);
 }
 
+void FCS_Interface::convertWpSettingToWaypoint_(const WayPointSettings & wp, dji_sdk::MissionWaypoint & waypoint) {
+  // Convert the nav_sat_fix to a mission waypoint.
+  // From demo_mission::uploadWaypoints()
+  waypoint.latitude = wp.latitude;
+  waypoint.longitude = wp.longitude;
+  waypoint.altitude = wp.altitude;
+  waypoint.damping_distance = 0;
+  waypoint.target_yaw = 0;
+  waypoint.target_gimbal_pitch = 0;
+  waypoint.turn_mode = 0;
+  waypoint.has_action = 0;
+  ROS_INFO("Waypoint created at: %f \t%f \t%f\n ", waypoint.latitude, waypoint.longitude, waypoint.altitude);
+}
+
 void FCS_Interface::setWaypointInitDefaults_(dji_sdk::MissionWaypointTask & waypointTask) {
   waypointTask.velocity_range = 10;
   waypointTask.idle_velocity = 5;
@@ -351,7 +365,8 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
        wp != generatedWaypts.end(); ++wp)
   {
     dji_sdk::MissionWaypoint waypoint;
-    convertToWaypoint_(nav_sat_fix, waypoint);
+    //convertToWaypoint_(nav_sat_fix, waypoint);
+    convertWpSettingToWaypoint_(wp, waypoint);
     waypointTask.mission_waypoint.push_back(waypoint);
   }
   // Initialise the waypoint mission.
