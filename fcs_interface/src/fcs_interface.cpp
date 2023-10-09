@@ -54,6 +54,7 @@ bool FCS_Interface::start() {
    while(ros::ok()) {
       home_mutex_.lock();
       if (home_position_initialised_) {
+        home_mutex_.unlock();
         break;
       }
       home_mutex_.unlock();
@@ -119,8 +120,9 @@ bool FCS_Interface::droneTaskControl_(DroneTask task) {
       droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_GOHOME;
       break;
   }
-
+  ROS_INFO("calling drone task client");
   drone_task_client_.call(droneTaskControl);
+  ROS_INFO("call ended");
   result = droneTaskControl.response.result;
   if (!result) {
     ROS_WARN("droneTaskControl failed.");
@@ -131,7 +133,7 @@ bool FCS_Interface::droneTaskControl_(DroneTask task) {
 }
 
 bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal) {
-  std::future<bool> result;
+  bool result {false};
   double desired_height;
 
   if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
@@ -139,16 +141,16 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
     home_mutex_.lock();
     desired_height = home_location_.altitude + take_off_height_;
     home_mutex_.unlock();
-    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskTakeOff);
+    result = droneTaskControl_(kTaskTakeOff);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
     ROS_INFO("Landing...");
     home_mutex_.lock();
     desired_height = home_location_.altitude;
     home_mutex_.unlock();
-    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskLand);
+    result = droneTaskControl_(kTaskLand);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
     ROS_INFO("Returning home...");
-    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskGoHome);
+    result = droneTaskControl_(kTaskGoHome);
   }
 
   bool preempted {false};
@@ -177,7 +179,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   }
 
   if(!preempted) {
-    if(!result.get()) {
+    if(!result) {
       ROS_WARN("Request for special movement has failed");
       special_mv_result_.done = false;
       special_mv_server_.setAborted(special_mv_result_); //consider sending a text msg as well to differentiate the reasons
@@ -322,8 +324,8 @@ generateWaypointsPolygon(WayPointSettings* start_data, float64_t increment,
   }
 
   // Come back home
-  start_data->index = num_wp;
-  wp_list.push_back(*start_data);
+  //start_data->index = num_wp;
+  //wp_list.push_back(*start_data);
 
   return wp_list;
 }
@@ -354,30 +356,31 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   setWaypointInitDefaults_(waypointTask);
 
   //float64_t increment = 0.000001 / M_PI * 180;
-  //float32_t start_alt = 10;
-  //ROS_INFO("Creating Waypoints..\n");
-  //int numWaypoints {5};
-  //std::vector<WayPointSettings> generatedWaypts =
-  //  createWaypoints(numWaypoints, increment, start_alt);
+  
+  float64_t increment = 0.00001 / M_PI * 180;
+  float32_t start_alt = 10;
+  ROS_INFO("Creating Waypoints..\n");
+  int numWaypoints {3};
+  std::vector<WayPointSettings> generatedWaypts =
+    createWaypoints(numWaypoints, increment, start_alt);
 
   dji_sdk::MissionWaypoint waypoint;
-  position_mutex_.lock();
-  convertToWaypoint_(gps_position_, waypoint);
-  position_mutex_.unlock();
+  //position_mutex_.lock();
+  //convertToWaypoint_(gps_position_, waypoint);
+  //position_mutex_.unlock();
     
-  waypointTask.mission_waypoint.push_back(waypoint);
+  //waypointTask.mission_waypoint.push_back(waypoint);
 
-  //for (std::vector<WayPointSettings>::iterator wp = generatedWaypts.begin();
-  //     wp != generatedWaypts.end(); ++wp)
-  //{
+  for (std::vector<WayPointSettings>::iterator wp = generatedWaypts.begin();
+       wp != generatedWaypts.end(); ++wp)
+  {
     
-    convertToWaypoint_(nav_sat_fix, waypoint);
-    //WayPointSettings ws = *wp;
-    //convertWpSettingToWaypoint_(ws, waypoint);
+    //convertToWaypoint_(nav_sat_fix, waypoint);
+    WayPointSettings ws = *wp;
+    convertWpSettingToWaypoint_(ws, waypoint);
     waypointTask.mission_waypoint.push_back(waypoint);
-
-    
-  //}
+    //waypointTask.mission_waypoint.push_back(waypoint);
+  }
   // Initialise the waypoint mission.
   dji_sdk::MissionWpUpload missionWaypointUpload;
   missionWaypointUpload.request.waypoint_task = waypointTask;
@@ -421,7 +424,7 @@ bool FCS_Interface::waypointMissionAction_(WaypointAction action) {
       ROS_WARN("Waypoint action not handled, %d", action);
       break;
   }
-  waypoint_action_client_.call(wp_action);
+  result = waypoint_action_client_.call(wp_action);
   if (!wp_action.response.result) {
     ROS_WARN("waypointMissionAction failed.");
     ROS_WARN("ack.info: set = %i id = %i", wp_action.response.cmd_set, wp_action.response.cmd_id);
