@@ -366,7 +366,8 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   {
     dji_sdk::MissionWaypoint waypoint;
     //convertToWaypoint_(nav_sat_fix, waypoint);
-    convertWpSettingToWaypoint_(wp, waypoint);
+    WayPointSettings ws = *wp;
+    convertWpSettingToWaypoint_(ws, waypoint);
     waypointTask.mission_waypoint.push_back(waypoint);
   }
   // Initialise the waypoint mission.
