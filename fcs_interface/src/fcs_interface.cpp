@@ -236,7 +236,6 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
   return result;
 }
 
-//TODO replace the pointer here by eithere reference or smart pointer, or consider it as the output value
 void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix, dji_sdk::MissionWaypoint & waypoint) {
   // Convert the nav_sat_fix to a mission waypoint.
   // From demo_mission::uploadWaypoints()
@@ -354,22 +353,31 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   dji_sdk::MissionWaypointTask waypointTask;
   setWaypointInitDefaults_(waypointTask);
 
-  float64_t increment = 0.000001 / M_PI * 180;
-  float32_t start_alt = 10;
-  ROS_INFO("Creating Waypoints..\n");
-  int numWaypoints {5};
-  std::vector<WayPointSettings> generatedWaypts =
-    createWaypoints(numWaypoints, increment, start_alt);
+  //float64_t increment = 0.000001 / M_PI * 180;
+  //float32_t start_alt = 10;
+  //ROS_INFO("Creating Waypoints..\n");
+  //int numWaypoints {5};
+  //std::vector<WayPointSettings> generatedWaypts =
+  //  createWaypoints(numWaypoints, increment, start_alt);
 
-  for (std::vector<WayPointSettings>::iterator wp = generatedWaypts.begin();
-       wp != generatedWaypts.end(); ++wp)
-  {
-    dji_sdk::MissionWaypoint waypoint;
-    //convertToWaypoint_(nav_sat_fix, waypoint);
-    WayPointSettings ws = *wp;
-    convertWpSettingToWaypoint_(ws, waypoint);
+  dji_sdk::MissionWaypoint waypoint;
+  position_mutex_.lock();
+  convertToWaypoint_(gps_position_, waypoint);
+  position_mutex_.unlock();
+    
+  waypointTask.mission_waypoint.push_back(waypoint);
+
+  //for (std::vector<WayPointSettings>::iterator wp = generatedWaypts.begin();
+  //     wp != generatedWaypts.end(); ++wp)
+  //{
+    
+    convertToWaypoint_(nav_sat_fix, waypoint);
+    //WayPointSettings ws = *wp;
+    //convertWpSettingToWaypoint_(ws, waypoint);
     waypointTask.mission_waypoint.push_back(waypoint);
-  }
+
+    
+  //}
   // Initialise the waypoint mission.
   dji_sdk::MissionWpUpload missionWaypointUpload;
   missionWaypointUpload.request.waypoint_task = waypointTask;
