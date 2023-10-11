@@ -18,6 +18,7 @@ set(MSG_FILES
   InputAccepted.msg
   SpecialMovement.msg
   BatteryPercentage.msg
+  GpsLocationWithPrecision.msg
 )
 
 add_service_files(
