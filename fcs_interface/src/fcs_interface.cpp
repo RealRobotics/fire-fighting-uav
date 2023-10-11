@@ -458,10 +458,28 @@ bool FCS_Interface::waypointMissionAction_(WaypointAction action) {
 }
 
 bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goal) {
+  //https://en.wikipedia.org/wiki/Haversine_formula
+
+  double R = 6378.137; // Radius of earth in KM
   position_mutex_.lock();
-  double current_distance = sqrt(pow(goal.latitude - gps_position_.latitude,2) + pow(goal.longitude - gps_position_.longitude,2));
+  double lat1 = gps_position_.latitude;
+  double lon1 = gps_position_.longitude;
   position_mutex_.unlock();
-  if (current_distance <= radius) {
+
+  double lat2 = goal.latitude;
+  double lon2 = goal.longitude;
+
+  double dLat = lat2 * M_PI / 180 - lat1 * M_PI / 180;
+  double dLon = lon2 * M_PI / 180 - lon1 * M_PI / 180;
+  
+  double a = sin(dLat/2) * sin(dLat/2) +
+    cos(lat1 * M_PI / 180) * cos(lat2 * M_PI / 180) *
+    sin(dLon/2) * sin(dLon/2);
+
+  double c = 2 * atan2(sqrt(a), sqrt(1-a));
+  double d = R * c * 1000; //meters
+
+  if (d <= radius) {
     return true;
   } else {
     return false;
