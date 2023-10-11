@@ -479,6 +479,8 @@ bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goa
   double c = 2 * atan2(sqrt(a), sqrt(1-a));
   double d = R * c * 1000; //meters
 
+  ROS_INFO("the current distance is %f", d);
+
   if (d <= radius) {
     return true;
   } else {
