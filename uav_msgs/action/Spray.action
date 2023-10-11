@@ -1,0 +1,9 @@
+#goal definition
+bool spray
+---
+#result definition
+bool done
+---
+#feedback
+uav_msgs/PumpStatus pump_status
+uav_msgs/GimbalStatus gimbal_status

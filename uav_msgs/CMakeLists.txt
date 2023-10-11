@@ -18,6 +18,8 @@ set(MSG_FILES
   InputAccepted.msg
   SpecialMovement.msg
   BatteryPercentage.msg
+  PumpStatus.msg
+  GimbalStatus.msg
   GpsLocationWithPrecision.msg
 )
 
@@ -29,7 +31,7 @@ add_service_files(
 
 add_action_files(
   DIRECTORY action
-  FILES FlyToWP.action SpecialMovement.action
+  FILES FlyToWP.action SpecialMovement.action Spray.action
 )
 
 add_message_files(DIRECTORY msg FILES ${MSG_FILES})
