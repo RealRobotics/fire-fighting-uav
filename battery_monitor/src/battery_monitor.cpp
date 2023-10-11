@@ -81,7 +81,7 @@ int main(int argc, char **argv)
   input_status_pub = nh.advertise<uav_msgs::InputAccepted>("input_accepted",1000);
   battery_status_pub = nh.advertise<uav_msgs::BatteryStatus>("battery_status", 1000);
 
-  ros::Subscriber battery_sub = nh.subscribe("/fcs/battery_state", 10, BatteryCallback);
+  ros::Subscriber battery_sub = nh.subscribe("/fcs_interface/battery_state", 10, BatteryCallback);
 
   ROS_INFO("Battery monitor is running");
 
