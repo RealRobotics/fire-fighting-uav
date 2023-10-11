@@ -1,23 +1,23 @@
 #include "mission_controller/fly_to_wp_bt_action.h"
 
 #include "uav_msgs/FlyToWPAction.h"
-#include <sensor_msgs/NavSatFix.h>
+#include "uav_msgs/GpsLocationWithPrecision.h"
 
 FlyToWpBTAction::FlyToWpBTAction(ros::NodeHandle& handle, const std::string& name, const BT::NodeConfiguration & conf)
 : BT::RosActionNode<uav_msgs::FlyToWPAction>(handle, name, conf){}
 
 BT::PortsList FlyToWpBTAction::providedPorts() {
-  return {BT::InputPort<sensor_msgs::NavSatFix>("waypoint"), BT::InputPort<int>("num_waypoints")};  
+  return {BT::InputPort<uav_msgs::GpsLocationWithPrecision>("waypoint"), BT::InputPort<int>("num_waypoints")};  
 }
 
 bool FlyToWpBTAction::sendGoal(GoalType& goal){
-  if(!getInput<sensor_msgs::NavSatFix>("waypoint", goal.goal_location))
+  if(!getInput<uav_msgs::GpsLocationWithPrecision>("waypoint", goal.goal))
   {
     ROS_INFO("no input");
     // abort the entire action. Result in a FAILURE
     return false;
   }
-  ROS_INFO("Sending goal request with latitude %f and longitude %f", goal.goal_location.latitude, goal.goal_location.longitude);
+  ROS_INFO("Sending goal request with latitude %f and longitude %f", goal.goal.location.latitude, goal.goal.location.longitude);
   return true;
 }
 

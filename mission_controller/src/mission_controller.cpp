@@ -53,13 +53,14 @@ void MissionController::loadWaypoints_(std::string path) {
       int num_waypoints = root["num_waypoints"].asInt();
       blackboard_->set("num_waypoints", num_waypoints);
       ROS_INFO("There are %d waypoints to load.", num_waypoints);
-      std::vector<sensor_msgs::NavSatFix> waypoints;
+      std::vector<uav_msgs::GpsLocationWithPrecision> waypoints;
       for (uint i = 0; i < num_waypoints; ++i) {
         std::string wp = "wp" + std::to_string(i);
-        sensor_msgs::NavSatFix gps_wp;
-        gps_wp.latitude = root[wp]["latitude"].asDouble();
-        gps_wp.longitude = root[wp]["longitude"].asDouble();
-        blackboard_->set(wp, gps_wp);
+        uav_msgs::GpsLocationWithPrecision gps_wp;
+        gps_wp.location.latitude = root[wp]["latitude"].asDouble();
+        gps_wp.location.longitude = root[wp]["longitude"].asDouble();
+        gps_wp.loc_precision = root[wp]["precision"].asDouble();
+        //blackboard_->set(wp, gps_wp);
         waypoints.push_back(gps_wp);
       }
       blackboard_->set("waypoint_list", waypoints);
