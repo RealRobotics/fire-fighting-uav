@@ -202,7 +202,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
 
 bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
 {
-  sensor_msgs::NavSatFix nav_sat_fix = goal->goal_location;
+  sensor_msgs::NavSatFix nav_sat_fix = goal->goal.location;
   ROS_INFO("Sending waypoint: %f, %f, %f", nav_sat_fix.latitude, nav_sat_fix.longitude, nav_sat_fix.altitude);
   bool result = uploadNavSatFix_(nav_sat_fix);
 
@@ -213,7 +213,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
   } else {
     bool preempted {false};
     ros::Duration feedback_period(0.1);
-    while(!droneWithinRadius_(goal->loc_precision, nav_sat_fix) && ros::ok()) {
+    while(!droneWithinRadius_(goal->goal.loc_precision, nav_sat_fix) && ros::ok()) {
 
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;

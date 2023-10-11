@@ -1,6 +1,6 @@
 #include "mission_controller/repeat_over_vector_until_failure.h"
 
-RepeatOverVectorUntilFailure::RepeatOverVectorUntilFailure(const std::string& name, std::vector<sensor_msgs::NavSatFix> vector) :
+RepeatOverVectorUntilFailure::RepeatOverVectorUntilFailure(const std::string& name, std::vector<uav_msgs::GpsLocationWithPrecision> vector) :
   DecoratorNode(name, {}),
   vector_(vector),
   repeat_count_(0),
@@ -17,8 +17,8 @@ RepeatOverVectorUntilFailure::RepeatOverVectorUntilFailure(const std::string& na
 
 BT::PortsList RepeatOverVectorUntilFailure::providedPorts()
 {
-  return {BT::InputPort<std::vector<sensor_msgs::NavSatFix>>("vector", "Repeat a successful child for each element of the vector repeatedly until failure occurs."),
-          BT::OutputPort<sensor_msgs::NavSatFix>("next_waypoint")};
+  return {BT::InputPort<std::vector<uav_msgs::GpsLocationWithPrecision>>("vector", "Repeat a successful child for each element of the vector repeatedly until failure occurs."),
+          BT::OutputPort<uav_msgs::GpsLocationWithPrecision>("next_waypoint")};
 }
 
 BT::NodeStatus RepeatOverVectorUntilFailure::tick()

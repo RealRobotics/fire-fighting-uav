@@ -8,6 +8,7 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/NavSatFix.h>
+#include "uav_msgs/GpsLocationWithPrecision.h"
 
 #define UNLADEN_VELOCITY_M_PER_S (2.0)
 #define LADEN_VELOCITY_M_PER_S (1.0)
@@ -98,7 +99,7 @@ bool DummyFCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalCon
 
 bool DummyFCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
 {
-  sensor_msgs::NavSatFix nav_sat_fix = goal->goal_location;
+  sensor_msgs::NavSatFix nav_sat_fix = goal->goal.location;
   ROS_INFO("Sending waypoint: %f, %f, %f", nav_sat_fix.latitude, nav_sat_fix.longitude, nav_sat_fix.altitude);
   std::future<bool> result = std::async(&DummyFCS_Interface::uploadNavSatFix_,this, nav_sat_fix);
 
