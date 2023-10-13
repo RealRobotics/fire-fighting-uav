@@ -1,6 +1,5 @@
 #goal definition
-sensor_msgs/NavSatFix goal_location
-float32 loc_precision
+uav_msgs/GpsLocationWithPrecision goal
 ---
 #result definition
 bool in_location

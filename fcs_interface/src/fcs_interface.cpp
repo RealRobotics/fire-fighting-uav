@@ -1,5 +1,6 @@
 #include "fcs_interface/fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
+#include "uav_msgs/BatteryPercentage.h"
 
 #include <chrono>
 #include <cmath>
@@ -22,8 +23,8 @@
 #define VELOCITY_RANGE_M_PER_S (5.0)
 
 FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
-: node_handle_(node_handle), fly_server_(node_handle, "fcs/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
-  special_mv_server_(node_handle, "fcs/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false) {
+: node_handle_(node_handle), fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
+  special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false) {
 }
 
 bool FCS_Interface::start() {
@@ -42,7 +43,7 @@ bool FCS_Interface::start() {
                                                                             &FCS_Interface::batteryStateCallback_, this);
 
   //set up publishing topics
-  battery_state_publisher_ = node_handle_.advertise<sensor_msgs::BatteryState>("fcs_interface/battery_state", 10);
+  battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
   //start the action servers
   fly_server_.start();
@@ -54,6 +55,7 @@ bool FCS_Interface::start() {
    while(ros::ok()) {
       home_mutex_.lock();
       if (home_position_initialised_) {
+        home_mutex_.unlock();
         break;
       }
       home_mutex_.unlock();
@@ -119,7 +121,6 @@ bool FCS_Interface::droneTaskControl_(DroneTask task) {
       droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_GOHOME;
       break;
   }
-
   drone_task_client_.call(droneTaskControl);
   result = droneTaskControl.response.result;
   if (!result) {
@@ -131,7 +132,7 @@ bool FCS_Interface::droneTaskControl_(DroneTask task) {
 }
 
 bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal) {
-  std::future<bool> result;
+  bool result {false};
   double desired_height;
 
   if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
@@ -139,22 +140,24 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
     home_mutex_.lock();
     desired_height = home_location_.altitude + take_off_height_;
     home_mutex_.unlock();
-    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskTakeOff);
+    result = droneTaskControl_(kTaskTakeOff);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
     ROS_INFO("Landing...");
     home_mutex_.lock();
     desired_height = home_location_.altitude;
     home_mutex_.unlock();
-    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskLand);
+    result = droneTaskControl_(kTaskLand);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
     ROS_INFO("Returning home...");
-    result = std::async(&FCS_Interface::droneTaskControl_,this,kTaskGoHome);
+    result = droneTaskControl_(kTaskGoHome);
   }
 
   bool preempted {false};
   position_mutex_.lock();
   double height_error = std::abs(desired_height - gps_position_.altitude);
   position_mutex_.unlock();
+
+  ros::Duration feedback_period(0.1);
 
   while( (height_error > height_precision_) && ros::ok()) {
 
@@ -174,10 +177,13 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
     position_mutex_.lock();
     height_error = std::abs(desired_height - gps_position_.altitude);
     position_mutex_.unlock();
+
+    feedback_period.sleep();
+    ros::spinOnce(); //TODO do i needd the spinning here?
   }
 
   if(!preempted) {
-    if(!result.get()) {
+    if(!result) {
       ROS_WARN("Request for special movement has failed");
       special_mv_result_.done = false;
       special_mv_server_.setAborted(special_mv_result_); //consider sending a text msg as well to differentiate the reasons
@@ -196,7 +202,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
 
 bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
 {
-  sensor_msgs::NavSatFix nav_sat_fix = goal->goal_location;
+  sensor_msgs::NavSatFix nav_sat_fix = goal->goal.location;
   ROS_INFO("Sending waypoint: %f, %f, %f", nav_sat_fix.latitude, nav_sat_fix.longitude, nav_sat_fix.altitude);
   bool result = uploadNavSatFix_(nav_sat_fix);
 
@@ -207,7 +213,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
   } else {
     bool preempted {false};
     ros::Duration feedback_period(0.1);
-    while(!droneWithinRadius_(goal->loc_precision, nav_sat_fix)) {
+    while(!droneWithinRadius_(goal->goal.loc_precision, nav_sat_fix) && ros::ok()) {
 
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;
@@ -223,6 +229,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
       }
 
       feedback_period.sleep();
+      ros::spinOnce(); //TODO do i needd the spinning here?
     }
 
     if(!preempted) {
@@ -236,13 +243,27 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
   return result;
 }
 
-//TODO replace the pointer here by eithere reference or smart pointer, or consider it as the output value
+//TODO return the wp rather than using reference
 void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix, dji_sdk::MissionWaypoint & waypoint) {
   // Convert the nav_sat_fix to a mission waypoint.
   // From demo_mission::uploadWaypoints()
   waypoint.latitude = nav_sat_fix.latitude;
   waypoint.longitude = nav_sat_fix.longitude;
   waypoint.altitude = nav_sat_fix.altitude;
+  waypoint.damping_distance = 0;
+  waypoint.target_yaw = 0;
+  waypoint.target_gimbal_pitch = 0;
+  waypoint.turn_mode = 0;
+  waypoint.has_action = 0;
+  ROS_INFO("Waypoint created at: %f \t%f \t%f\n ", waypoint.latitude, waypoint.longitude, waypoint.altitude);
+}
+
+void FCS_Interface::convertWpSettingToWaypoint_(const WayPointSettings & wp, dji_sdk::MissionWaypoint & waypoint) {
+  // Convert the nav_sat_fix to a mission waypoint.
+  // From demo_mission::uploadWaypoints()
+  waypoint.latitude = wp.latitude;
+  waypoint.longitude = wp.longitude;
+  waypoint.altitude = wp.altitude;
   waypoint.damping_distance = 0;
   waypoint.target_yaw = 0;
   waypoint.target_gimbal_pitch = 0;
@@ -309,8 +330,8 @@ generateWaypointsPolygon(WayPointSettings* start_data, float64_t increment,
   }
 
   // Come back home
-  start_data->index = num_wp;
-  wp_list.push_back(*start_data);
+  //start_data->index = num_wp;
+  //wp_list.push_back(*start_data);
 
   return wp_list;
 }
@@ -334,26 +355,56 @@ FCS_Interface::createWaypoints(int numWaypoints, float64_t distanceIncrement,
   return wpVector;
 }
 
+sensor_msgs::NavSatFix FCS_Interface::generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix) {
+  sensor_msgs::NavSatFix mid_wp;
+  position_mutex_.lock();
+  double latitude_diff = (nav_sat_fix.latitude - gps_position_.latitude)/2.0;
+  double longitude_diff = (nav_sat_fix.longitude - gps_position_.longitude)/2.0;
+  double altitude_diff = (nav_sat_fix.altitude - gps_position_.altitude)/2.0;
+  position_mutex_.unlock();
+
+  mid_wp.latitude = nav_sat_fix.latitude - latitude_diff;
+  mid_wp.longitude = nav_sat_fix.longitude - longitude_diff;
+  mid_wp.altitude = nav_sat_fix.altitude - altitude_diff;
+
+  return mid_wp;
+}
+
 bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) {
   bool result = false;
   // Waypoint Mission : Initialization
   dji_sdk::MissionWaypointTask waypointTask;
   setWaypointInitDefaults_(waypointTask);
 
-  float64_t increment = 0.000001 / M_PI * 180;
+  //delete this code when done testing
+  /*float64_t increment = 0.00001 / M_PI * 180;
   float32_t start_alt = 10;
   ROS_INFO("Creating Waypoints..\n");
-  int numWaypoints {5};
+  int numWaypoints {3};
   std::vector<WayPointSettings> generatedWaypts =
     createWaypoints(numWaypoints, increment, start_alt);
 
   for (std::vector<WayPointSettings>::iterator wp = generatedWaypts.begin();
        wp != generatedWaypts.end(); ++wp)
   {
-    dji_sdk::MissionWaypoint waypoint;
-    convertToWaypoint_(nav_sat_fix, waypoint);
+    WayPointSettings ws = *wp;
+    convertWpSettingToWaypoint_(ws, waypoint);
     waypointTask.mission_waypoint.push_back(waypoint);
-  }
+  }*/
+
+  dji_sdk::MissionWaypoint waypoint;
+  position_mutex_.lock();
+  convertToWaypoint_(gps_position_, waypoint);
+  position_mutex_.unlock();
+  waypointTask.mission_waypoint.push_back(waypoint);
+
+  convertToWaypoint_(generate_mid_point_(nav_sat_fix), waypoint);
+  waypointTask.mission_waypoint.push_back(waypoint);
+  
+  convertToWaypoint_(nav_sat_fix, waypoint);
+  waypointTask.mission_waypoint.push_back(waypoint);
+
+
   // Initialise the waypoint mission.
   dji_sdk::MissionWpUpload missionWaypointUpload;
   missionWaypointUpload.request.waypoint_task = waypointTask;
@@ -397,7 +448,7 @@ bool FCS_Interface::waypointMissionAction_(WaypointAction action) {
       ROS_WARN("Waypoint action not handled, %d", action);
       break;
   }
-  waypoint_action_client_.call(wp_action);
+  result = waypoint_action_client_.call(wp_action);
   if (!wp_action.response.result) {
     ROS_WARN("waypointMissionAction failed.");
     ROS_WARN("ack.info: set = %i id = %i", wp_action.response.cmd_set, wp_action.response.cmd_id);
@@ -407,10 +458,30 @@ bool FCS_Interface::waypointMissionAction_(WaypointAction action) {
 }
 
 bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goal) {
+  //https://en.wikipedia.org/wiki/Haversine_formula
+
+  double R = 6378.137; // Radius of earth in KM
   position_mutex_.lock();
-  double current_distance = sqrt(pow(goal.latitude - gps_position_.latitude,2) + pow(goal.longitude - gps_position_.longitude,2));
+  double lat1 = gps_position_.latitude;
+  double lon1 = gps_position_.longitude;
   position_mutex_.unlock();
-  if (current_distance <= radius) {
+
+  double lat2 = goal.latitude;
+  double lon2 = goal.longitude;
+
+  double dLat = lat2 * M_PI / 180 - lat1 * M_PI / 180;
+  double dLon = lon2 * M_PI / 180 - lon1 * M_PI / 180;
+  
+  double a = sin(dLat/2) * sin(dLat/2) +
+    cos(lat1 * M_PI / 180) * cos(lat2 * M_PI / 180) *
+    sin(dLon/2) * sin(dLon/2);
+
+  double c = 2 * atan2(sqrt(a), sqrt(1-a));
+  double d = R * c * 1000; //meters
+
+  ROS_INFO("the current distance is %f", d);
+
+  if (d <= radius) {
     return true;
   } else {
     return false;
@@ -434,5 +505,10 @@ void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr&
 }
 
 void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
-  battery_state_publisher_.publish(*message);
+  static int num_runs = 0;
+  uav_msgs::BatteryPercentage msg;
+  msg.input_msg_id  = num_runs;
+  msg.percentage = int(message->percentage);
+  battery_state_publisher_.publish(msg);
+  num_runs++;
 }

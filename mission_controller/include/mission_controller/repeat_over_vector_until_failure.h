@@ -6,13 +6,13 @@
 
 #include "behaviortree_cpp_v3/decorator_node.h"
 #include "behaviortree_cpp_v3/bt_factory.h"
-#include "sensor_msgs/NavSatFix.h"
+#include "uav_msgs/GpsLocationWithPrecision.h"
 
 class RepeatOverVectorUntilFailure : public BT::DecoratorNode
 {
 public:
   
-  RepeatOverVectorUntilFailure(const std::string& name, std::vector<sensor_msgs::NavSatFix> vector);
+  RepeatOverVectorUntilFailure(const std::string& name, std::vector<uav_msgs::GpsLocationWithPrecision> vector);
 
   RepeatOverVectorUntilFailure(const std::string& name, const BT::NodeConfiguration& config);
 
@@ -24,7 +24,7 @@ public:
                          const std::string& registration_ID);
 
 private:
-  std::vector<sensor_msgs::NavSatFix> vector_;
+  std::vector<uav_msgs::GpsLocationWithPrecision> vector_;
   int repeat_count_;
   bool all_skipped_ = true;
 

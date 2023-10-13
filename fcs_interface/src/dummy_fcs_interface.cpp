@@ -1,5 +1,6 @@
 #include "fcs_interface/dummy_fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
+#include "uav_msgs/BatteryPercentage.h"
 
 #include <chrono>
 #include <cmath>
@@ -7,14 +8,15 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/NavSatFix.h>
+#include "uav_msgs/GpsLocationWithPrecision.h"
 
 #define UNLADEN_VELOCITY_M_PER_S (2.0)
 #define LADEN_VELOCITY_M_PER_S (1.0)
 #define VELOCITY_RANGE_M_PER_S (5.0)
 
 DummyFCS_Interface::DummyFCS_Interface(ros::NodeHandle node_handle)
-: node_handle_(node_handle), fly_server_(node_handle, "fcs/fly_to_wp", boost::bind(&DummyFCS_Interface::setWaypoint_, this, _1), false),
-  special_mv_server_(node_handle, "fcs/special_movement", boost::bind(&DummyFCS_Interface::specialMovement_, this, _1), false) {
+: node_handle_(node_handle), fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&DummyFCS_Interface::setWaypoint_, this, _1), false),
+  special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&DummyFCS_Interface::specialMovement_, this, _1), false) {
 }
 
 bool DummyFCS_Interface::start() {
@@ -27,7 +29,7 @@ bool DummyFCS_Interface::start() {
                                                                             &DummyFCS_Interface::batteryStateCallback_, this);
 
   //set up publishing topics
-  battery_state_publisher_ = node_handle_.advertise<sensor_msgs::BatteryState>("fcs_interface/battery_state", 10);
+  battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
   //start the action servers
   fly_server_.start();
@@ -37,6 +39,7 @@ bool DummyFCS_Interface::start() {
   while(ros::ok()) {
     home_mutex_.lock();
     if (home_position_initialised_) {
+      home_mutex_.unlock();
       break;
     }
     home_mutex_.unlock();
@@ -96,7 +99,7 @@ bool DummyFCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalCon
 
 bool DummyFCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
 {
-  sensor_msgs::NavSatFix nav_sat_fix = goal->goal_location;
+  sensor_msgs::NavSatFix nav_sat_fix = goal->goal.location;
   ROS_INFO("Sending waypoint: %f, %f, %f", nav_sat_fix.latitude, nav_sat_fix.longitude, nav_sat_fix.altitude);
   std::future<bool> result = std::async(&DummyFCS_Interface::uploadNavSatFix_,this, nav_sat_fix);
 
@@ -156,5 +159,10 @@ void DummyFCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::Cons
 }
 
 void DummyFCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
-  battery_state_publisher_.publish(*message);
+    static int num_runs = 0;
+  uav_msgs::BatteryPercentage msg;
+  msg.input_msg_id  = num_runs;
+  msg.percentage = int(message->percentage);
+  battery_state_publisher_.publish(msg);
+  num_runs++;
 }
