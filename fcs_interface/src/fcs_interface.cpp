@@ -258,20 +258,6 @@ void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix
   ROS_INFO("Waypoint created at: %f \t%f \t%f\n ", waypoint.latitude, waypoint.longitude, waypoint.altitude);
 }
 
-void FCS_Interface::convertWpSettingToWaypoint_(const WayPointSettings & wp, dji_sdk::MissionWaypoint & waypoint) {
-  // Convert the nav_sat_fix to a mission waypoint.
-  // From demo_mission::uploadWaypoints()
-  waypoint.latitude = wp.latitude;
-  waypoint.longitude = wp.longitude;
-  waypoint.altitude = wp.altitude;
-  waypoint.damping_distance = 0;
-  waypoint.target_yaw = 0;
-  waypoint.target_gimbal_pitch = 0;
-  waypoint.turn_mode = 0;
-  waypoint.has_action = 0;
-  ROS_INFO("Waypoint created at: %f \t%f \t%f\n ", waypoint.latitude, waypoint.longitude, waypoint.altitude);
-}
-
 void FCS_Interface::setWaypointInitDefaults_(dji_sdk::MissionWaypointTask & waypointTask) {
   waypointTask.velocity_range = 10;
   waypointTask.idle_velocity = 5;
@@ -281,78 +267,6 @@ void FCS_Interface::setWaypointInitDefaults_(dji_sdk::MissionWaypointTask & wayp
   waypointTask.trace_mode = dji_sdk::MissionWaypointTask::TRACE_POINT;
   waypointTask.action_on_rc_lost = dji_sdk::MissionWaypointTask::ACTION_AUTO;
   waypointTask.gimbal_pitch_mode = dji_sdk::MissionWaypointTask::GIMBAL_PITCH_FREE;
-}
-
-void
-setWaypointDefaults(WayPointSettings* wp)
-{
-  wp->damping         = 0;
-  wp->yaw             = 0;
-  wp->gimbalPitch     = 0;
-  wp->turnMode        = 0;
-  wp->hasAction       = 0;
-  wp->actionTimeLimit = 100;
-  wp->actionNumber    = 0;
-  wp->actionRepeat    = 0;
-  for (int i = 0; i < 16; ++i)
-  {
-    wp->commandList[i]      = 0;
-    wp->commandParameter[i] = 0;
-  }
-}
-
-
-std::vector<DJI::OSDK::WayPointSettings>
-generateWaypointsPolygon(WayPointSettings* start_data, float64_t increment,
-                         int num_wp)
-{
-  // Let's create a vector to store our waypoints in.
-  std::vector<DJI::OSDK::WayPointSettings> wp_list;
-
-  // Some calculation for the polygon
-  float64_t extAngle = 2 * M_PI / num_wp;
-
-  // First waypoint
-  start_data->index = 0;
-  wp_list.push_back(*start_data);
-
-  // Iterative algorithm
-  for (int i = 1; i < num_wp; i++)
-  {
-    WayPointSettings  wp;
-    WayPointSettings* prevWp = &wp_list[i - 1];
-    setWaypointDefaults(&wp);
-    wp.index     = i;
-    wp.latitude  = (prevWp->latitude + (increment * cos(i * extAngle)));
-    wp.longitude = (prevWp->longitude + (increment * sin(i * extAngle)));
-    wp.altitude  = (prevWp->altitude + 1);
-    wp_list.push_back(wp);
-  }
-
-  // Come back home
-  //start_data->index = num_wp;
-  //wp_list.push_back(*start_data);
-
-  return wp_list;
-}
-
-std::vector<DJI::OSDK::WayPointSettings>
-FCS_Interface::createWaypoints(int numWaypoints, float64_t distanceIncrement,
-                float32_t start_alt)
-{
-  // Create Start Waypoint
-  WayPointSettings start_wp;
-  setWaypointDefaults(&start_wp);
-  //TODO add pos mutex
-  start_wp.latitude  = gps_position_.latitude;
-  start_wp.longitude = gps_position_.longitude;
-  start_wp.altitude  = start_alt;
-  ROS_INFO("Waypoint created at (LLA): %f \t%f \t%f\n", gps_position_.latitude,
-           gps_position_.longitude, start_alt);
-
-  std::vector<DJI::OSDK::WayPointSettings> wpVector =
-    generateWaypointsPolygon(&start_wp, distanceIncrement, numWaypoints);
-  return wpVector;
 }
 
 sensor_msgs::NavSatFix FCS_Interface::generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix) {
@@ -375,22 +289,6 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   // Waypoint Mission : Initialization
   dji_sdk::MissionWaypointTask waypointTask;
   setWaypointInitDefaults_(waypointTask);
-
-  //delete this code when done testing
-  /*float64_t increment = 0.00001 / M_PI * 180;
-  float32_t start_alt = 10;
-  ROS_INFO("Creating Waypoints..\n");
-  int numWaypoints {3};
-  std::vector<WayPointSettings> generatedWaypts =
-    createWaypoints(numWaypoints, increment, start_alt);
-
-  for (std::vector<WayPointSettings>::iterator wp = generatedWaypts.begin();
-       wp != generatedWaypts.end(); ++wp)
-  {
-    WayPointSettings ws = *wp;
-    convertWpSettingToWaypoint_(ws, waypoint);
-    waypointTask.mission_waypoint.push_back(waypoint);
-  }*/
 
   dji_sdk::MissionWaypoint waypoint;
   position_mutex_.lock();
