@@ -53,7 +53,6 @@ private:
   bool setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal);
 
   void convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix, dji_sdk::MissionWaypoint & waypoint);
-  void convertWpSettingToWaypoint_(const WayPointSettings & wp, dji_sdk::MissionWaypoint & waypoint);
   void setWaypointInitDefaults_(dji_sdk::MissionWaypointTask & waypointTask);
   bool uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix);
   bool waypointMissionAction_(WaypointAction action);
@@ -61,10 +60,6 @@ private:
 
   void gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message);
   void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
-
-  std::vector<DJI::OSDK::WayPointSettings>
-  createWaypoints(int numWaypoints, float64_t distanceIncrement,
-                float32_t start_alt);
 
   sensor_msgs::NavSatFix generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix);
 
