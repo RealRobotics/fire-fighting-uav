@@ -43,10 +43,11 @@ void BatteryCallback(const uav_msgs::BatteryPercentage::ConstPtr& msg)
       output_msg.status = uav_msgs::BatteryStatus::SAFETY_CRITICAL;
     } else {
       ROS_ERROR("Invalid battery reading.");
-      output_msg.status = uav_msgs::BatteryStatus::BATTERY_READING_OUT_OF_SCOPE;
+    }
+    if (output_msg.status != uav_msgs::BatteryStatus::UNSET) {
+      battery_status_pub.publish(output_msg);
     }
   }
-  battery_status_pub.publish(output_msg);
 }
 
 int8_t LoadThreshold(ros::NodeHandle nh, std::string threshold_name) {
