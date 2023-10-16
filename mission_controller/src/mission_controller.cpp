@@ -59,6 +59,7 @@ void MissionController::loadWaypoints_(std::string path) {
         uav_msgs::GpsLocationWithPrecision gps_wp;
         gps_wp.location.latitude = root[wp]["latitude"].asDouble();
         gps_wp.location.longitude = root[wp]["longitude"].asDouble();
+        gps_wp.location.altitude = root[wp]["altitude"].asDouble();
         gps_wp.loc_precision = root[wp]["precision"].asDouble();
         //blackboard_->set(wp, gps_wp);
         waypoints.push_back(gps_wp);
