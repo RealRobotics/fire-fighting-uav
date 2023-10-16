@@ -20,7 +20,7 @@ This scenario is supported by the `monitoring_scenario.xml`.
 ## Known limitations (as of 06/10/2023)
 
 - the drone will perform "star" pattern on waypoints; this mean that the drone will fly from its home location to the wp and then return to its home location before flying to another wp. This is due limitations of dji_sdk library which doesn't allow to fly to a single wp but requires a set of minimal three of them, when the first and the last needs to be home locations
-- it is assumed in this file, that actions of the drone cannot be interrupted (this is due limitations of FCS interface). You can check `interruptable_monitoring_scenario.xml` for an example of an extended tree which would handle if actions are interruptable. However, this file hasn't been tested so it may contain mistakes.
+- it is assumed in this file, that actions of the drone cannot be interrupted. You can check bottom of this readme for an example of an extended tree which would handle if actions are interruptable. It may be worthit to investigate usage of STOP/PAUSE form MissionWpAction service. This should make the FLyToWp action interruptable. 
 
 ## Scenario tree explanation
 
@@ -173,15 +173,17 @@ Sending the services/changing battery status would allow you to influence what p
 
 ### Possible expansion when actions will be interruptible
 
-TODO: clean the text below
+I think that reactive fallback node would be great way how to allow for an interruptible actions. This means that each interruptible action (i.e. take off, land, go home, fly to wp) would now be replaced by a tree where top node is reactive fallback and its children are two condition nodes (battery and mission enable) and the actual action node. 
 
-The step fly changed too. It now consists of a reactive fallback, a condition and an action node. The working of there three nodes is as follows. First, the reactive fallbacks get triggered. Then, it triggers the condition “Has the ground station requested a stop?”. The outcome of a condition node is either SUCCESS or FAILURE.
-In case of a SUCCESS, the reactive fallback will be SUCCESS too and the action node land will be triggered next.
-In case of FAILURE, the reactive fallback will trigger the action node Fly. Action nodes can return RUNNING, SUCCESS and FAILURE.
-In case of RUNNING, the reactive fallback node will trigger again the first condition node
-In case of SUCCESS, the reactive fallback node returns SUCCESS too and the next action node Land is triggered
-In case of FAILURE, the reactive fallback node returns FAILURE which gets propagated to the top node which returns FAILURE too and the whole scenario has failed.
+An explanation of its functionality for FlyToWp is:
 
-Now we can focus on the action Fly. It can be modelled as a subtree. We can start with a very simple tree:
+First, the reactive fallbacks get triggered. Then, it triggers the condition “Has the ground station requested a stop?”. **Notice we need to work with negations**. This is beacuse it is fallback - the children to the right are triggered only when there is a **failure** The outcome of a condition node is either SUCCESS or FAILURE.
+In case of a SUCCESS, the reactive fallback will be SUCCESS too. Hence, the drone will not fly anywhere and it will continue the rest of the tree.
+In case of FAILURE, the reactive fallback will trigger the condition node "Is the battery **NOT** Ok?". Again, the outcome is either SUCCESS or FAILURE.
+In case of SUCCESS, the reactive callback ends again.
+Finally, in case of FAILURE, the FlyToWp action is triggered. Action nodes can return RUNNING, SUCCESS and FAILURE.
+In case of RUNNING, the reactive fallback node will trigger again the first condition node (i.e. checking if mission controlled is enabled). This is important as this checking of the first child is exactly where the interruptibility comes to. If this child return SUCCESS, the fallbacks ends, which will trigger cancellation (halting) of the FLyToWp action.
 
-TODO - Add more stuff here...
+In case of SUCCESS of FlyToWp, the reactive fallback node returns SUCCESS too and the next action node Land is triggered
+In case of FAILURE of FlyToWp, the reactive fallback node returns FAILURE which gets propagated to the top node which returns FAILURE too and the whole scenario has failed.
+
