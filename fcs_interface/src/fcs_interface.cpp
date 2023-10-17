@@ -45,6 +45,10 @@ bool FCS_Interface::start() {
   //set up publishing topics
   battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
+  
+  altitude_subscriber_ = node_handle_.subscribe<std_msgs::Float32>("dji_sdk/height_above_takeoff", 10,
+                                                                            &FCS_Interface::altitudeCallback_, this);
+
   //start the action servers
   fly_server_.start();
   special_mv_server_.start();
@@ -138,13 +142,13 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
     ROS_INFO("Taking off...");
     home_mutex_.lock();
-    desired_height = home_location_.altitude + take_off_height_;
+    desired_height = take_off_height_;
     home_mutex_.unlock();
     result = droneTaskControl_(kTaskTakeOff);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
     ROS_INFO("Landing...");
     home_mutex_.lock();
-    desired_height = home_location_.altitude;
+    desired_height = 0;
     home_mutex_.unlock();
     result = droneTaskControl_(kTaskLand);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
@@ -153,9 +157,9 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   }
 
   bool preempted {false};
-  position_mutex_.lock();
-  double height_error = std::abs(desired_height - gps_position_.altitude);
-  position_mutex_.unlock();
+  altitude_mutex_.lock();
+  double height_error = std::abs(desired_height - altitude_);
+  altitude_mutex_.unlock();
 
   ros::Duration feedback_period(0.1);
 
@@ -174,9 +178,9 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
       break;
     }
 
-    position_mutex_.lock();
-    height_error = std::abs(desired_height - gps_position_.altitude);
-    position_mutex_.unlock();
+    altitude_mutex_.lock();
+    height_error = std::abs(desired_height - altitude_);
+    altitude_mutex_.unlock();
 
     feedback_period.sleep();
     ros::spinOnce(); //TODO do i needd the spinning here?
@@ -274,7 +278,9 @@ sensor_msgs::NavSatFix FCS_Interface::generate_mid_point_(const sensor_msgs::Nav
   position_mutex_.lock();
   double latitude_diff = (nav_sat_fix.latitude - gps_position_.latitude)/2.0;
   double longitude_diff = (nav_sat_fix.longitude - gps_position_.longitude)/2.0;
-  double altitude_diff = (nav_sat_fix.altitude - gps_position_.altitude)/2.0;
+  altitude_mutex_.lock();
+  double altitude_diff = (nav_sat_fix.altitude - altitude_)/2.0;
+  altitude_mutex_.unlock();
   position_mutex_.unlock();
 
   mid_wp.latitude = nav_sat_fix.latitude - latitude_diff;
@@ -292,6 +298,9 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
 
   dji_sdk::MissionWaypoint waypoint;
   position_mutex_.lock();
+  altitude_mutex_.lock();
+  gps_position_.altitude = altitude_;
+  altitude_mutex_.unlock();
   convertToWaypoint_(gps_position_, waypoint);
   position_mutex_.unlock();
   waypointTask.mission_waypoint.push_back(waypoint);
@@ -409,4 +418,10 @@ void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::Const
   msg.percentage = int(message->percentage);
   battery_state_publisher_.publish(msg);
   num_runs++;
+}
+
+void FCS_Interface::altitudeCallback_(const std_msgs::Float32::ConstPtr& message) {
+  altitude_mutex_.lock();
+  altitude_ = message->data;
+  altitude_mutex_.unlock();
 }
