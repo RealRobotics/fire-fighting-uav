@@ -43,4 +43,8 @@ Congrats! You have just made a pull request! Now, someone else needs to go and r
 
 ### Review of pull requests
 
-When someone reviews your pull request, it is likely they will ask questions or ask you to make changes. You can do that by pushing another commit to the same branch you used for the development of this feature. 
+When someone reviews your pull request, it is likely they will ask questions or ask you to make changes. You can do that by pushing another commit to the same branch you used for the development of this feature.
+
+### Very Important Step for Onboard DJI SDK ROS installation
+
+Change the original SDK node file and publisher file with the one from shival-data branch Onboard SDK files. The original files had several bugs which were sorted out with the DJI support centre and made it up & running with lab's M600Pro drone.
