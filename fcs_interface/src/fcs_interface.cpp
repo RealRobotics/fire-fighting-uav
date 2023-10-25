@@ -154,11 +154,15 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
     ROS_INFO("Landing...");
     result = droneTaskControl_(kTaskLand);
+    status_mutex_.lock();
     loop_condition = (status_ != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND) && ros::ok();
+    status_mutex_.unlock();
   } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
     ROS_INFO("Returning home...");
     result = droneTaskControl_(kTaskGoHome);
+    status_mutex_.lock();
     loop_condition = (status_ != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND) && ros::ok();
+    status_mutex_.unlock();
   }
 
   bool preempted {false};
@@ -170,7 +174,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
       special_mv_feedback_.current_location = gps_position_;
       position_mutex_.unlock();
       altitude_mutex_.lock();
-      fly_feedback_.current_location.altitude = altitude_;
+      special_mv_feedback_.current_location.altitude = altitude_;
       altitude_mutex_.unlock();
       special_mv_server_.publishFeedback(special_mv_feedback_);
     }
@@ -188,9 +192,13 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
       altitude_mutex_.unlock();
       loop_condition =  (height_error > height_precision_) && ros::ok();
     } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
+      status_mutex_.lock();
       loop_condition = (status_ != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND) && ros::ok();
+      status_mutex_.unlock();
     } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
+      status_mutex_.lock();
       loop_condition = (status_ != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND) && ros::ok();
+      status_mutex_.unlock();
     }  
 
     feedback_period.sleep();
