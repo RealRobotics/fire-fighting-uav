@@ -15,6 +15,7 @@
 #include "uav_msgs/SpecialMovementAction.h"
 
 #include "std_msgs/Float32.h"
+#include "std_msgs/UInt8.h"
 
 class FCS_Interface
 {
@@ -63,6 +64,7 @@ private:
   void gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message);
   void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
   void altitudeCallback_(const std_msgs::Float32::ConstPtr& message);
+  void flightStatusCallback_(const std_msgs::UInt8::ConstPtr& message);
 
   sensor_msgs::NavSatFix generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix);
 
@@ -76,16 +78,19 @@ private:
   ros::Subscriber gps_position_subscriber_;
   ros::Subscriber battery_state_subscriber_;
   ros::Subscriber altitude_subscriber_;
+  ros::Subscriber flight_status_subscriber_;
 
   ros::Publisher battery_state_publisher_; 
 
   bool loaded_ {false};
   sensor_msgs::NavSatFix gps_position_;
   double altitude_ {0.0};
-  
+  uint8_t status_;
+
   std::mutex position_mutex_;
   std::mutex home_mutex_;
   std::mutex altitude_mutex_;
+  std::mutex status_mutex_;
   
   actionlib::SimpleActionServer<uav_msgs::SpecialMovementAction> special_mv_server_;
   actionlib::SimpleActionServer<uav_msgs::FlyToWPAction> fly_server_;
