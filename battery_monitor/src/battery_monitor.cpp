@@ -26,6 +26,7 @@ void BatteryCallback(const uav_msgs::BatteryPercentage::ConstPtr& msg)
   uav_msgs::InputAccepted msg2;
   msg2.data = true;
   msg2.input_msg_id = msg->input_msg_id;
+  msg2.stamp = ros::Time::now();
   input_status_pub.publish(msg2);
 
   uav_msgs::BatteryStatus output_msg;
@@ -45,6 +46,7 @@ void BatteryCallback(const uav_msgs::BatteryPercentage::ConstPtr& msg)
       ROS_ERROR("Invalid battery reading.");
     }
     if (output_msg.status != uav_msgs::BatteryStatus::UNSET) {
+      output_msg.stamp = ros::Time::now();
       battery_status_pub.publish(output_msg);
     }
   }
