@@ -141,19 +141,16 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
 
   if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
     ROS_INFO("Taking off...");
-    home_mutex_.lock();
     desired_height = take_off_height_;
-    home_mutex_.unlock();
     result = droneTaskControl_(kTaskTakeOff);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
     ROS_INFO("Landing...");
-    home_mutex_.lock();
     desired_height = 0;
-    home_mutex_.unlock();
     result = droneTaskControl_(kTaskLand);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
     ROS_INFO("Returning home...");
     result = droneTaskControl_(kTaskGoHome);
+    desired_height = 0;
   }
 
   bool preempted {false};
@@ -168,6 +165,9 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
     if(position_mutex_.try_lock()) {
       special_mv_feedback_.current_location = gps_position_;
       position_mutex_.unlock();
+      altitude_mutex_.lock();
+      special_mv_feedback_.current_location.altitude = altitude_;
+      altitude_mutex_.unlock();
       special_mv_server_.publishFeedback(special_mv_feedback_);
     }
 
@@ -183,7 +183,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
     altitude_mutex_.unlock();
 
     feedback_period.sleep();
-    ros::spinOnce(); //TODO do i needd the spinning here?
+    ros::spinOnce(); 
   }
 
   if(!preempted) {
@@ -199,6 +199,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
       return true;
     }
   } else {
+    special_mv_result_.done = false;
     ROS_WARN("%s: Preempted", fly_action_name_.c_str());
     return false;
   }
@@ -222,6 +223,9 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;
         position_mutex_.unlock();
+        altitude_mutex_.lock();
+        fly_feedback_.current_location.altitude = altitude_;
+        altitude_mutex_.unlock();
         fly_server_.publishFeedback(fly_feedback_);
       }
 
@@ -233,7 +237,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
       }
 
       feedback_period.sleep();
-      ros::spinOnce(); //TODO do i needd the spinning here?
+      ros::spinOnce();
     }
 
     if(!preempted) {
@@ -241,6 +245,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
       ROS_INFO("%s: Succeeded", fly_action_name_.c_str());
       fly_server_.setSucceeded(fly_result_);
     } else {
+      fly_result_.in_location = false;
       ROS_WARN("%s: Preempted", fly_action_name_.c_str());
     }
   }
@@ -415,7 +420,15 @@ void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::Const
   static int num_runs = 0;
   uav_msgs::BatteryPercentage msg;
   msg.input_msg_id  = num_runs;
-  msg.percentage = int(message->percentage);
+  int perc = int(message->percentage);
+  if (perc < 0) {
+    perc = 0;
+  }
+  if (perc > 100) {
+    perc = 100;
+  }
+  msg.percentage = perc;
+  msg.stamp = ros::Time::now();
   battery_state_publisher_.publish(msg);
   num_runs++;
 }
