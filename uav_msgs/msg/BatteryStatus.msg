@@ -1,3 +1,4 @@
+time stamp
 uint32 input_msg_id
 uint8 status
 uint8 UNSET = 0   # The status of battery is unknown

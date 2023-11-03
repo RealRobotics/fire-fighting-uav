@@ -166,7 +166,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
       special_mv_feedback_.current_location = gps_position_;
       position_mutex_.unlock();
       altitude_mutex_.lock();
-      fly_feedback_.current_location.altitude = altitude_;
+      special_mv_feedback_.current_location.altitude = altitude_;
       altitude_mutex_.unlock();
       special_mv_server_.publishFeedback(special_mv_feedback_);
     }
