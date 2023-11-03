@@ -41,16 +41,13 @@ bool FCS_Interface::start() {
                                                                             &FCS_Interface::gpsPositionCallback_, this);
   battery_state_subscriber_ = node_handle_.subscribe<sensor_msgs::BatteryState>("dji_sdk/battery_state", 10,
                                                                             &FCS_Interface::batteryStateCallback_, this);
-  altitude_subscriber_ = node_handle_.subscribe<std_msgs::Float32>("dji_sdk/height_above_takeoff", 10,
-                                                                            &FCS_Interface::altitudeCallback_, this);
-
-  flight_status_subscriber_ = node_handle_.subscribe<std_msgs::UInt8>("dji_sdk/flight_status", 10,
-                                                                            &FCS_Interface::flightStatusCallback_, this);
 
   //set up publishing topics
   battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
-
+  
+  altitude_subscriber_ = node_handle_.subscribe<std_msgs::Float32>("dji_sdk/height_above_takeoff", 10,
+                                                                            &FCS_Interface::altitudeCallback_, this);
 
   //start the action servers
   fly_server_.start();
@@ -141,30 +138,29 @@ bool FCS_Interface::droneTaskControl_(DroneTask task) {
 bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal) {
   bool result {false};
   double desired_height;
-  bool loop_condition {false};
 
   if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
     ROS_INFO("Taking off...");
     desired_height = take_off_height_;
     result = droneTaskControl_(kTaskTakeOff);
-    altitude_mutex_.lock();
-    double height_error = std::abs(desired_height - altitude_);
-    altitude_mutex_.unlock();
-    loop_condition =  (height_error > height_precision_) && ros::ok();
   } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
     ROS_INFO("Landing...");
+    desired_height = 0;
     result = droneTaskControl_(kTaskLand);
-    loop_condition = (status_ != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND) && ros::ok();
   } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
     ROS_INFO("Returning home...");
     result = droneTaskControl_(kTaskGoHome);
-    loop_condition = (status_ != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND) && ros::ok();
+    desired_height = 0;
   }
 
   bool preempted {false};
+  altitude_mutex_.lock();
+  double height_error = std::abs(desired_height - altitude_);
+  altitude_mutex_.unlock();
+
   ros::Duration feedback_period(0.1);
 
-  while(loop_condition) {
+  while( (height_error > height_precision_) && ros::ok()) {
 
     if(position_mutex_.try_lock()) {
       special_mv_feedback_.current_location = gps_position_;
@@ -182,19 +178,12 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
       break;
     }
 
-    if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
-      altitude_mutex_.lock();
-      double height_error = std::abs(desired_height - altitude_);
-      altitude_mutex_.unlock();
-      loop_condition =  (height_error > height_precision_) && ros::ok();
-    } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
-      loop_condition = (status_ != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND) && ros::ok();
-    } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
-      loop_condition = (status_ != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND) && ros::ok();
-    }  
+    altitude_mutex_.lock();
+    height_error = std::abs(desired_height - altitude_);
+    altitude_mutex_.unlock();
 
     feedback_period.sleep();
-    ros::spinOnce(); //TODO do i needd the spinning here?
+    ros::spinOnce(); 
   }
 
   if(!preempted) {
@@ -448,10 +437,4 @@ void FCS_Interface::altitudeCallback_(const std_msgs::Float32::ConstPtr& message
   altitude_mutex_.lock();
   altitude_ = message->data;
   altitude_mutex_.unlock();
-}
-
-void FCS_Interface::flightStatusCallback_(const std_msgs::UInt8::ConstPtr& message){
-  status_mutex_.lock();
-  status_ = message->data;
-  status_mutex_.unlock();
 }
