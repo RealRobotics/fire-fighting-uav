@@ -19,6 +19,8 @@
 // SOFTWARE.
 
 #include "mission_controller/is_battery_required_status.h"
+#include "ros/ros.h"
+#include "uav_msgs/BatteryStatus.h"
 
 #include <memory>
 

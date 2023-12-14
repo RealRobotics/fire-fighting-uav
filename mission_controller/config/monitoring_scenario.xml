@@ -1,36 +1,44 @@
 <root>
     <BehaviorTree>
-      <Sequence>
-        <Inverter>
-          <KeepRunningUntilFailure>
-            <Inverter>
-              <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-            </Inverter>
-          </KeepRunningUntilFailure>
-        </Inverter>
         <Sequence>
-          <IsBatteryRequiredStatus required_status="{battery_ok}"/>
-          <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-          <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{take_off}"/>
+            <!-- Check if the mission is disabled -->
+            <Inverter>
+                <KeepRunningUntilFailure>
+                    <Inverter>
+                        <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+                    </Inverter>
+                </KeepRunningUntilFailure>
+            </Inverter>
+            
+            <!-- Take off if battery is okay and mission is enabled -->
+            <ReactiveSequence>
+                <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+                <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+                <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{take_off}"/>
+            </ReactiveSequence>
+            
+            <!-- Run Search waypoints with WSP1 as input -->
+            <Fallback>
+                <ReactiveSequence>
+                    <!-- Check battery and mission status before flying to waypoint -->
+                    <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+                    <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+                    <!-- Fly to waypoint with WSP1 as input -->
+                    <KeepRunningUntilFailure>
+                        <FlyToWpBTAction server_name="/fcs_interface/fly_to_wp" type_of_action="{waypoints search pattern 1}"/>
+                    </KeepRunningUntilFailure>
+                </ReactiveSequence>
+                <!-- Fallback for mission-critical battery -->
+                <Sequence>
+                    <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
+                    <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{go_home}"/>
+                </Sequence>
+                <!-- Fallback for safety-critical battery -->
+                <Sequence>
+                    <IsBatteryRequiredStatus required_status="{battery_safety_critical}"/>
+                    <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{land}"/>
+                </Sequence>
+            </Fallback>
         </Sequence>
-        <Fallback>
-          <RepeatOverVectorUntilFailure vector="{waypoint_list}" next_waypoint="{current_waypoint}">
-            <Sequence>
-              <IsBatteryRequiredStatus required_status="{battery_ok}"/>
-              <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-              <FlyToWpBTAction server_name="/fcs_interface/fly_to_wp" waypoint="{current_waypoint}"/>
-            </Sequence>
-          </RepeatOverVectorUntilFailure>
-          <Sequence>
-            <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
-            <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-            <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{go_home}"/>
-          </Sequence>
-          <Sequence>
-            <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-            <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{land}"/>
-          </Sequence>
-        </Fallback>  
-      </Sequence>
-     </BehaviorTree>
- </root>
+    </BehaviorTree>
+</root>

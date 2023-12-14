@@ -19,70 +19,74 @@
 // SOFTWARE.
 
 #include "mission_controller/fly_to_wp_bt_action.h"
+#include "uav_msgs/WayPtSearch.h"
+#include "uav_msgs/SearchWPAction.h"
+#include "ros/ros.h"
+#include "uav_msgs/BatteryStatus.h"
 
-#include "uav_msgs/FlyToWPAction.h"
-#include "uav_msgs/GpsLocationWithPrecision.h"
+// FlyToWpBTAction::FlyToWpBTAction(ros::NodeHandle& handle, const std::string& name, const BT::NodeConfiguration & conf)
+//     : BT::RosActionNode<uav_msgs::SearchWPAction>(handle, name, conf) {}
 
-/**
- * This method is constructor.
- * BehaviourCpp library already provides ROS wrapper for ROS action. 
- * So this class just inherits from there.
- * @param handle -  reference to ros nodehandle
- * @param name - reference to name for the BT node
- * @param conf - reference to BT::node configuration
-*/
 FlyToWpBTAction::FlyToWpBTAction(ros::NodeHandle& handle, const std::string& name, const BT::NodeConfiguration & conf)
-: BT::RosActionNode<uav_msgs::FlyToWPAction>(handle, name, conf){}
-
-/**
- * This method defines what ports this BT node has.
- * For this class we need the waypoint where the drone should fly
-*/
-BT::PortsList FlyToWpBTAction::providedPorts() {
-  return {BT::InputPort<uav_msgs::GpsLocationWithPrecision>("waypoint")};  
+    : BT::RosActionNode<uav_msgs::SearchWPAction>(handle, name, conf), nh_(handle)
+{
+    battery_status_sub_ = nh_.subscribe<uav_msgs::BatteryStatus>(
+        "battery_monitor/battery_status", 10, &FlyToWpBTAction::batteryStatusCallback_, this);
 }
 
-/**
- * This method gets callled automatically when the BT node is ticked.
- * It reads the input port and sets it as the goal for ROS action
- * @param goal - this is automatically filled based on what action is being wrapped
-*/
-bool FlyToWpBTAction::sendGoal(GoalType& goal){
-  if(!getInput<uav_msgs::GpsLocationWithPrecision>("waypoint", goal.goal))
+
+BT::PortsList FlyToWpBTAction::providedPorts()
+{
+    return {BT::InputPort<uint8_t>("type_of_action")};
+}
+
+bool FlyToWpBTAction::sendGoal(GoalType& goal)
+{
+  if(!getInput<uint8_t>("type_of_action", goal.goal.status))
   {
-    ROS_INFO("no input");
     // abort the entire action. Result in a FAILURE
     return false;
   }
-  ROS_INFO("Sending goal request with latitude %f and longitude %f", goal.goal.location.latitude, goal.goal.location.longitude);
+  ROS_INFO("Sending goal request with WSP1 %d", goal.goal.WSP1);
+  //setStatus(BT::NodeStatus::RUNNING);
   return true;
 }
 
-/**
- * This method is called automatically by BT.
- * If BT node is running, it can be halted.
- * In this case, we use method provided by the library.
- * It should lead to ROS action being cancelled.
-*/
-void FlyToWpBTAction::halt(){
-  if( status() == BT::NodeStatus::RUNNING ) {
-    ROS_WARN("Fly to wp action is being halted");
-    BaseClass::halt();
+void FlyToWpBTAction::halt()
+{
+    if (status() == BT::NodeStatus::RUNNING)
+    {
+        ROS_WARN("Fly to wp action is being Cancled");
+        BaseClass::halt();
+        // action_client_->cancelGoal();
+         setStatus(BT::NodeStatus::FAILURE);
+    }
+}
+
+BT::NodeStatus FlyToWpBTAction::onResult(const ResultType& res)
+{
+    uint8_t type_of_action;
+    getInput<uint8_t>("type_of_action", type_of_action);
+    ROS_INFO("Fly to waypoints action %d has succeeded", type_of_action);
+    return BT::NodeStatus::SUCCESS;
+}
+
+BT::NodeStatus FlyToWpBTAction::onFailedRequest(FailureCause failure)
+{
+    ROS_INFO("Fly to wp action request failed %d", static_cast<int>(failure));
+    if (failure != ABORTED_BY_SERVER) {
+        FlyToWpBTAction::halt();
+    }
+    return BT::NodeStatus::FAILURE;
+}
+void FlyToWpBTAction::batteryStatusCallback_(const uav_msgs::BatteryStatus::ConstPtr& message) 
+{
+  status_mtx_.lock();
+  current_status_ = message->status;
+  status_mtx_.unlock();
+  if (status() == BT::NodeStatus::RUNNING && current_status_ != required_status_)
+  {
+    FlyToWpBTAction::halt();
+     ros::Duration(5.0).sleep();
   }
-}
-
-/**
- * After ROS action returns result, the BT node is done.
- * This method gets called automatically by BT
-*/
-BT::NodeStatus FlyToWpBTAction::onResult( const ResultType& res){
-  return BT::NodeStatus::SUCCESS;
-}
-
-/**
- * If the action server refuse the action, this method gets called automatically.
-*/
-BT::NodeStatus FlyToWpBTAction::onFailedRequest(FailureCause failure){
-  ROS_ERROR("Fly to wp action request failed %d", static_cast<int>(failure));
-  return BT::NodeStatus::FAILURE;
 }

@@ -6,7 +6,8 @@ IsMissionEnabled::IsMissionEnabled(const std::string & instance_name, const BT::
   : BT::ConditionNode(instance_name, conf), nh_(nh) {
 }
 
-BT::NodeStatus IsMissionEnabled::tick() {
+BT::NodeStatus IsMissionEnabled::tick() 
+{
   bool current_status {false};
   getInput<bool>("mission_enabled", current_status);
   //TODO I can pass mutex owned by mission_controller if I want to be sure
@@ -14,8 +15,10 @@ BT::NodeStatus IsMissionEnabled::tick() {
     ROS_INFO("IsMissionEnabled: SUCCESS");
     return BT::NodeStatus::SUCCESS;
   } else {
-    ROS_INFO("IsMissionEnabled: FAILURE");
-    return BT::NodeStatus::FAILURE;
+    //ROS_INFO("IsMissionEnabled: FAILURE");
+    //return BT::NodeStatus::FAILURE; disabled for debugging
+    ROS_INFO("IsMissionEnabled: SUCCESS"); // added for debugging purpose
+    return BT::NodeStatus::SUCCESS;        // added for debugging purpose
   }
 }
 

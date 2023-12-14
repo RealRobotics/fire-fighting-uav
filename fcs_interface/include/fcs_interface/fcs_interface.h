@@ -12,7 +12,10 @@
 #include <djiosdk/dji_vehicle.hpp>
 
 #include "uav_msgs/FlyToWPAction.h"
+
 #include "uav_msgs/SpecialMovementAction.h"
+
+#include "uav_msgs/SearchWPAction.h" // Nabil
 
 #include "std_msgs/Float32.h"
 
@@ -59,10 +62,16 @@ private:
   bool uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix);
   bool waypointMissionAction_(WaypointAction action);
   bool droneWithinRadius_(double radius, sensor_msgs::NavSatFix goal);
+  void uploadWaypointsJSON(const std::string& jsonFilePath, int responseTimeout, dji_sdk::MissionWaypointTask& waypoint);
+  //bool uploadWaypointsFromJSON(const std::string& jsonFilePath, int responseTimeout); //Modified for JSON Nabil
+  std::vector<WayPointSettings> readWaypointsFromJSON(const std::string& jsonFilePath); //Modified for JSON Nabil
+  bool setWaypoints_(const uav_msgs::SearchWPGoalConstPtr &goal); // added new function for setting waypoints from Goal
+  bool runSearchMission(int responseTimeout); 
 
   void gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message);
   void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
   void altitudeCallback_(const std_msgs::Float32::ConstPtr& message);
+  bool droneWithinRadiusFromJSON(const std::string& jsonFilePath);
 
   sensor_msgs::NavSatFix generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix);
 
@@ -88,11 +97,11 @@ private:
   std::mutex altitude_mutex_;
   
   actionlib::SimpleActionServer<uav_msgs::SpecialMovementAction> special_mv_server_;
-  actionlib::SimpleActionServer<uav_msgs::FlyToWPAction> fly_server_;
+  actionlib::SimpleActionServer<uav_msgs::SearchWPAction> fly_server_; // Nabil
   std::string fly_action_name_ {"fcs/fly_to_wp"};
   std::string special_mv_action_name_ {"fcs/special_movement"};
-  uav_msgs::FlyToWPFeedback fly_feedback_;
-  uav_msgs::FlyToWPResult fly_result_;
+  uav_msgs::SearchWPFeedback fly_feedback_;
+  uav_msgs::SearchWPResult fly_result_;
   uav_msgs::SpecialMovementFeedback special_mv_feedback_;
   uav_msgs::SpecialMovementResult special_mv_result_;
 

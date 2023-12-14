@@ -37,10 +37,19 @@
  * @param tree_file - path to .xml file with BT specification. This BT will be run in the mission controller
  * @param waypoints_file - path to .json file which specifies wp over which drone shall be moving
  */
-MissionController::MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file) 
- : nh_(nh) {
+// MissionController::MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file) 
+//  : nh_(nh) {
+//   registerNodes_();
+//   createTree_(tree_file, waypoints_file);
+//   enable_service_ = nh.advertiseService("mission_controller/enable_mission", &MissionController::enableMission_,this);
+//   disable_service_ = nh.advertiseService("mission_controller/disable_mission", &MissionController::disableMission_,this);
+// }
+
+MissionController::MissionController(ros::NodeHandle nh, std::string tree_file) 
+ : nh_(nh) 
+ {
   registerNodes_();
-  createTree_(tree_file, waypoints_file);
+  createTree_(tree_file);
   enable_service_ = nh.advertiseService("mission_controller/enable_mission", &MissionController::enableMission_,this);
   disable_service_ = nh.advertiseService("mission_controller/disable_mission", &MissionController::disableMission_,this);
 }
@@ -50,7 +59,8 @@ MissionController::MissionController(ros::NodeHandle nh, std::string tree_file, 
  * when the exececution of BT finishes (i.e. it succeeded or failed)
  * or when ros dies
 */
-void MissionController::run() {
+void MissionController::run() 
+{
   BT::NodeStatus status = BT::NodeStatus::IDLE;
 
   ROS_INFO("Mission controller ready to run");
@@ -68,7 +78,8 @@ void MissionController::run() {
 /**
  * Each type of custom BT node must be "registered" that the BT builder can know what type matches what class
 */
-void MissionController::registerNodes_() {
+void MissionController::registerNodes_() 
+{
   BT::RegisterRosAction<FlyToWpBTAction>(factory_, "FlyToWpBTAction", nh_);
   BT::RegisterRosAction<SpecialMovementBTAction>(factory_, "SpecialMovementBTAction", nh_);
   IsBatteryRequiredStatus::Register(factory_, "IsBatteryRequiredStatus", nh_);
@@ -85,11 +96,12 @@ void MissionController::registerNodes_() {
  * @param tree_file path to .xml file containing BT specification
  * @param waypoints_file path to .json file containing the search pattern
 */
-void MissionController::createTree_(std::string tree_file, std::string waypoints_file) {
+void MissionController::createTree_(std::string tree_file) 
+{
   tree_ = factory_.createTreeFromFile(tree_file);
   blackboard_ = tree_.rootBlackboard();
   blackboard_->set("mission_enabled", false);
-  loadWaypoints_(waypoints_file);
+  loadWaypoints_();
   loadBatteryLimits_();
   loadSpecialMovementsCmds_();  
 }
@@ -98,44 +110,56 @@ void MissionController::createTree_(std::string tree_file, std::string waypoints
  * This method parses json file and loads the waypoints into BT storage (= blackboard)
  * @param path - path to .json file containing the search pattern
 */
-void MissionController::loadWaypoints_(std::string path) {
-  std::ifstream search_pattern_file; 
-  search_pattern_file.open(path);
-  Json::Value root;
-  if (search_pattern_file.is_open()) {
-    ROS_INFO("Loading the search pattern.");
-    Json::CharReaderBuilder builder;
-    builder["collectComments"] = false;
-    JSONCPP_STRING errs;
-    if (!parseFromStream(builder, search_pattern_file, &root, &errs)) {
-      std::cout << errs << std::endl;
-      return;
-    } else {
-      int num_waypoints = root["num_waypoints"].asInt();
-      blackboard_->set("num_waypoints", num_waypoints);
-      ROS_INFO("There are %d waypoints to load.", num_waypoints);
-      std::vector<uav_msgs::GpsLocationWithPrecision> waypoints;
-      for (uint i = 0; i < num_waypoints; ++i) {
-        std::string wp = "wp" + std::to_string(i);
-        uav_msgs::GpsLocationWithPrecision gps_wp;
-        gps_wp.location.latitude = root[wp]["latitude"].asDouble();
-        gps_wp.location.longitude = root[wp]["longitude"].asDouble();
-        gps_wp.location.altitude = root[wp]["altitude"].asDouble();
-        gps_wp.loc_precision = root[wp]["precision"].asDouble();
-        //blackboard_->set(wp, gps_wp);
-        waypoints.push_back(gps_wp);
-      }
-      blackboard_->set("waypoint_list", waypoints);
-    }
-  }
-}
+// void MissionController::loadWaypoints_(std::string path) {
+//   std::ifstream search_pattern_file; 
+//   search_pattern_file.open(path);
+//   Json::Value root;
+//   if (search_pattern_file.is_open()) {
+//     ROS_INFO("Loading the search pattern.");
+//     Json::CharReaderBuilder builder;
+//     builder["collectComments"] = false;
+//     JSONCPP_STRING errs;
+//     if (!parseFromStream(builder, search_pattern_file, &root, &errs)) {
+//       std::cout << errs << std::endl;
+//       return;
+//     } else {
+//       int num_waypoints = root["num_waypoints"].asInt();
+//       blackboard_->set("num_waypoints", num_waypoints);
+//       ROS_INFO("There are %d waypoints to load.", num_waypoints);
+//       std::vector<uav_msgs::GpsLocationWithPrecision> waypoints;
+//       for (uint i = 0; i < num_waypoints; ++i) {
+//         std::string wp = "wp" + std::to_string(i);
+//         uav_msgs::GpsLocationWithPrecision gps_wp;
+//         gps_wp.location.latitude = root[wp]["latitude"].asDouble();
+//         gps_wp.location.longitude = root[wp]["longitude"].asDouble();
+//         gps_wp.location.altitude = root[wp]["altitude"].asDouble();
+//         gps_wp.loc_precision = root[wp]["precision"].asDouble();
+//         //blackboard_->set(wp, gps_wp);
+//         waypoints.push_back(gps_wp);
+//       }
+//       blackboard_->set("waypoint_list", waypoints);
+//     }
+//   }
+// }
 
+/**
+ * This method parses json file and loads the waypoints into BT storage (= blackboard)
+ * @param path - path to .json file containing the search pattern
+*/
+void MissionController::loadWaypoints_() 
+{ 
+  blackboard_->set("no waypoints", uint8_t(uav_msgs::WayPtSearch::WSP0));
+  blackboard_->set("waypoints search pattern 1", uint8_t(uav_msgs::WayPtSearch::WSP1));
+  blackboard_->set("waypoints search pattern 2", uint8_t(uav_msgs::WayPtSearch::WSP2));
+  
+}
 /**
  * The three constants for battery status are loaded to BT storage
  * This is needed as those constants are referred in .xml file;
  * without this loading the BT construction wouldn't understand those limits
 */
-void MissionController::loadBatteryLimits_() {
+void MissionController::loadBatteryLimits_() 
+{
   blackboard_->set("battery_ok", uint8_t(uav_msgs::BatteryStatus::OK));
   blackboard_->set("battery_mission_critical", uint8_t(uav_msgs::BatteryStatus::MISSION_CRITICAL));
   blackboard_->set("battery_safety_critical", uint8_t(uav_msgs::BatteryStatus::SAFETY_CRITICAL));
@@ -144,7 +168,8 @@ void MissionController::loadBatteryLimits_() {
 /**
  * The constants for special movements are loaded here. The reasoning is same as in the above method.
 */
-void MissionController::loadSpecialMovementsCmds_() {
+void MissionController::loadSpecialMovementsCmds_() 
+{
   blackboard_->set("take_off", uint8_t(uav_msgs::SpecialMovement::TAKE_OFF));
   blackboard_->set("land", uint8_t(uav_msgs::SpecialMovement::LAND));
   blackboard_->set("go_home", uint8_t(uav_msgs::SpecialMovement::GO_HOME));

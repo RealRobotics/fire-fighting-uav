@@ -1,0 +1,9 @@
+{
+  "num_waypoints": 1,
+  "wp0": {
+    "latitude": 53.807707,
+    "longitude": -1.55744,
+    "altitude":10.0,
+    "precision": 1
+  }
+}

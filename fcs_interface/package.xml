@@ -15,6 +15,8 @@
   <depend>uav_msgs</depend>
   <depend>actionlib</depend>
   <depend>actionlib_msgs</depend>
+  <depend>jsoncpp</depend>
+  <depend>roslib</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

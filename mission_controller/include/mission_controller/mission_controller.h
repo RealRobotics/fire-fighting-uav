@@ -29,15 +29,18 @@
 #include "uav_msgs/EnableMission.h"
 #include "uav_msgs/DisableMission.h"
 
-class MissionController {
+class MissionController 
+{
 public:
-  MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file);
+  // MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file);
+  MissionController(ros::NodeHandle nh, std::string tree_file);
   void run();
 
 private:
   void registerNodes_();
-  void createTree_(std::string tree_file, std::string waypoints_file);
-  void loadWaypoints_(std::string path);
+  //void createTree_(std::string tree_file, std::string waypoints_file);
+  void createTree_(std::string tree_file);
+  void loadWaypoints_();
   void loadBatteryLimits_();
   void loadSpecialMovementsCmds_();
   bool enableMission_(uav_msgs::EnableMission::Request  &req,

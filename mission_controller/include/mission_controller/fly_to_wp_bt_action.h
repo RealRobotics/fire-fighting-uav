@@ -22,9 +22,14 @@
 #define FLY_TO_WP_BT_ACTION_H
 
 #include "behaviortree_ros/bt_action_node.h"
-#include "uav_msgs/FlyToWPAction.h"
+//#include "uav_msgs/FlyToWPAction.h"
+#include "uav_msgs/WayPtSearch.h"
+#include "uav_msgs/SearchWPAction.h"
+#include "ros/ros.h"
+#include "uav_msgs/BatteryStatus.h"
 
-class FlyToWpBTAction : public BT::RosActionNode<uav_msgs::FlyToWPAction>{
+class FlyToWpBTAction : public BT::RosActionNode<uav_msgs::SearchWPAction>
+{
  public:
   FlyToWpBTAction(ros::NodeHandle& handle, const std::string& name, const BT::NodeConfiguration & conf);
   static BT::PortsList providedPorts();
@@ -32,8 +37,16 @@ class FlyToWpBTAction : public BT::RosActionNode<uav_msgs::FlyToWPAction>{
   void halt() override;
   BT::NodeStatus onResult( const ResultType& res) override;
   virtual BT::NodeStatus onFailedRequest(FailureCause failure) override;
+  
 
  private:
+  void batteryStatusCallback_(const uav_msgs::BatteryStatus::ConstPtr& message);
+  ros::NodeHandle nh_;
+  ros::Subscriber battery_status_sub_;
+  std::mutex status_mtx_;
+  uint8_t current_status_ {uav_msgs::BatteryStatus::OK};
+  uint8_t required_status_ {uav_msgs::BatteryStatus::OK};
 };
+
 
 #endif //FLY_TO_WP_BT_ACTION_H

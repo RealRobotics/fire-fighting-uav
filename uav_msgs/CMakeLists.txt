@@ -21,6 +21,7 @@ set(MSG_FILES
   PumpStatus.msg
   GimbalStatus.msg
   GpsLocationWithPrecision.msg
+  WayPtSearch.msg
 )
 
 add_service_files(
@@ -31,7 +32,7 @@ add_service_files(
 
 add_action_files(
   DIRECTORY action
-  FILES FlyToWP.action SpecialMovement.action Spray.action
+  FILES FlyToWP.action SpecialMovement.action Spray.action SearchWP.action
 )
 
 add_message_files(DIRECTORY msg FILES ${MSG_FILES})

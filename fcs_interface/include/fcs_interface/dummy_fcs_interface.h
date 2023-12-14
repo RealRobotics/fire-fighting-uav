@@ -8,8 +8,16 @@
 #include <sensor_msgs/BatteryState.h>
 #include <actionlib/server/simple_action_server.h>
 
+#include <dji_sdk/MissionWaypointTask.h>
+#include <djiosdk/dji_vehicle.hpp>
+
 #include "uav_msgs/FlyToWPAction.h"
+
 #include "uav_msgs/SpecialMovementAction.h"
+
+#include "uav_msgs/SearchWPAction.h" // Nabil
+
+#include "std_msgs/Float32.h"
 
 class DummyFCS_Interface
 {
@@ -22,40 +30,86 @@ public:
   bool start();
 
 private:
+  enum DroneTask
+  {
+    kTaskTakeOff,
+    kTaskLand,
+    kTaskGoHome
+  };
+
+  enum WaypointAction
+  {
+    kActionStart,
+    kActionStop,
+    kActionPause,
+    kActionResume
+  };
   
-  bool droneTaskControl_();
+
+  bool activate_();
+  bool obtainControlAuthority_();
+  /** This method arms the drone and takes off.
+   * Blocks until done.
+   * @return true on success.
+   */
+  bool getReady_();
+  bool droneTaskControl_(DroneTask task);
 
   bool specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal);
   bool setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal);
 
-  bool uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix);
+  void setWaypointInitDefaults_(dji_sdk::MissionWaypointTask & waypointTask);
+  bool waypointMissionAction_(WaypointAction action);
+  bool droneWithinRadius_(double radius, sensor_msgs::NavSatFix goal);
+  void uploadWaypointsJSON(const std::string& jsonFilePath, int responseTimeout, dji_sdk::MissionWaypointTask& waypoint);
+
+  std::vector<WayPointSettings> readWaypointsFromJSON(const std::string& jsonFilePath); //Modified for JSON Nabil
+  bool setWaypoints_(const uav_msgs::SearchWPGoalConstPtr &goal); // added new function for setting waypoints from Goal
+  bool runSearchMission(int responseTimeout); 
+  
 
   void gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message);
   void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
+  void altitudeCallback_(const std_msgs::Float32::ConstPtr& message);
+  bool droneWithinRadiusFromJSON(const std::string& jsonFilePath);
 
+  sensor_msgs::NavSatFix generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix);
+
+//
   ros::NodeHandle node_handle_;
+  ros::ServiceClient control_authority_client_;
+  ros::ServiceClient drone_activation_client_;
+  ros::ServiceClient drone_task_client_;
+  ros::ServiceClient waypoint_action_client_;
+  ros::ServiceClient waypoint_upload_client_;
 
   ros::Subscriber gps_position_subscriber_;
   ros::Subscriber battery_state_subscriber_;
+  ros::Subscriber altitude_subscriber_;
 
   ros::Publisher battery_state_publisher_; 
 
+  bool loaded_ {false};
   sensor_msgs::NavSatFix gps_position_;
+  double altitude_ {0.0};
   
   std::mutex position_mutex_;
   std::mutex home_mutex_;
+  std::mutex altitude_mutex_;
   
   actionlib::SimpleActionServer<uav_msgs::SpecialMovementAction> special_mv_server_;
-  actionlib::SimpleActionServer<uav_msgs::FlyToWPAction> fly_server_;
+  actionlib::SimpleActionServer<uav_msgs::SearchWPAction> fly_server_; // Nabil
   std::string fly_action_name_ {"fcs/fly_to_wp"};
   std::string special_mv_action_name_ {"fcs/special_movement"};
-  uav_msgs::FlyToWPFeedback fly_feedback_;
-  uav_msgs::FlyToWPResult fly_result_;
+  uav_msgs::SearchWPFeedback fly_feedback_;
+  uav_msgs::SearchWPResult fly_result_;
   uav_msgs::SpecialMovementFeedback special_mv_feedback_;
   uav_msgs::SpecialMovementResult special_mv_result_;
 
+  const double take_off_height_ {1.2};
+  const double height_precision_ {0.05};
   sensor_msgs::NavSatFix home_location_;
-  bool home_position_initialised_ {false};
+  bool home_position_initialised_ {false};; 
 
 };
 
