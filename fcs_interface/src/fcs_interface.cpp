@@ -141,11 +141,15 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
 
   if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
     ROS_INFO("Taking off...");
+    home_mutex_.lock();
     desired_height = take_off_height_;
+    home_mutex_.unlock();
     result = droneTaskControl_(kTaskTakeOff);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
     ROS_INFO("Landing...");
+    home_mutex_.lock();
     desired_height = 0;
+    home_mutex_.unlock();
     result = droneTaskControl_(kTaskLand);
   } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
     ROS_INFO("Returning home...");
@@ -183,7 +187,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
     altitude_mutex_.unlock();
 
     feedback_period.sleep();
-    ros::spinOnce(); 
+    ros::spinOnce(); //TODO do i needd the spinning here?
   }
 
   if(!preempted) {
@@ -237,7 +241,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
       }
 
       feedback_period.sleep();
-      ros::spinOnce();
+      ros::spinOnce(); //TODO do i needd the spinning here?
     }
 
     if(!preempted) {
