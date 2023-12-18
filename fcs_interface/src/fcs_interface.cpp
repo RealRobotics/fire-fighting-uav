@@ -247,8 +247,19 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
     if(!preempted) {
       fly_result_.in_location = true;
       ROS_INFO("%s: Succeeded", fly_action_name_.c_str());
-      fly_server_.setSucceeded(fly_result_);
-    } else {
+      // Stop the mission.
+      if (waypointMissionAction_(kActionStop))
+      {
+        ROS_INFO("Mission Stop command sent successfully");
+      } 
+      else 
+      {
+        ROS_WARN("Failed sending mission start command");
+      }
+        fly_server_.setSucceeded(fly_result_);
+      } 
+    else 
+    {
       fly_result_.in_location = false;
       ROS_WARN("%s: Preempted", fly_action_name_.c_str());
     }

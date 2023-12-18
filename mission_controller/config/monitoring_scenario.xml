@@ -19,7 +19,6 @@
               <IsBatteryRequiredStatus required_status="{battery_ok}"/>
               <IsMissionEnabled mission_enabled="{mission_enabled}"/>
               <FlyToWpBTAction server_name="/fcs_interface/fly_to_wp" waypoint="{current_waypoint}"/>
-              <Delay delay_msec="3000"/>
             </Sequence>
           </RepeatOverVectorUntilFailure>
           <Sequence>
