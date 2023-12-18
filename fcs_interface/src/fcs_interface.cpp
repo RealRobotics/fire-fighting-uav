@@ -244,20 +244,30 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
       ros::spinOnce(); //TODO do i needd the spinning here?
     }
 
-    if(!preempted) {
+    if(!preempted) 
+    {
       fly_result_.in_location = true;
       ROS_INFO("%s: Succeeded", fly_action_name_.c_str());
       // Stop the mission.
       if (waypointMissionAction_(kActionStop))
       {
-        ROS_INFO("Mission Stop command sent successfully");
+        ROS_INFO("Mission STOP command sent successfully");
       } 
       else 
       {
-        ROS_WARN("Failed sending mission start command");
+        ROS_WARN("Failed sending mission STOP command sending Stop command again");
+        if (waypointMissionAction_(kActionStop))
+        {
+          ROS_INFO("Mission STOP command sent successfully");
+        } 
+        else 
+        {
+          ROS_WARN("Failed sending mission STOP command sending again");
+        
+        }
       }
-        fly_server_.setSucceeded(fly_result_);
-      } 
+      fly_server_.setSucceeded(fly_result_);
+     } 
     else 
     {
       fly_result_.in_location = false;
@@ -310,6 +320,37 @@ sensor_msgs::NavSatFix FCS_Interface::generate_mid_point_(const sensor_msgs::Nav
   return mid_wp;
 }
 
+
+sensor_msgs::NavSatFix FCS_Interface::generate_d_point_(const sensor_msgs::NavSatFix& nav_sat_fix, const u_int8_t point_number)
+{
+  sensor_msgs::NavSatFix adjusted_wp;
+  position_mutex_.lock();
+  double latitude_diff = (nav_sat_fix.latitude - gps_position_.latitude) / 2.0;
+  double longitude_diff = (nav_sat_fix.longitude - gps_position_.longitude) / 2.0;
+  altitude_mutex_.lock();
+  double altitude_diff = (nav_sat_fix.altitude - altitude_) / 2.0;
+  altitude_mutex_.unlock();
+  position_mutex_.unlock();
+
+  adjusted_wp.latitude = nav_sat_fix.latitude - latitude_diff;
+  adjusted_wp.longitude = nav_sat_fix.longitude - longitude_diff;
+  adjusted_wp.altitude = nav_sat_fix.altitude - altitude_diff;
+
+  // Adjust latitude and longitude based on point_number
+  double adjustment = 0.0;
+  if (point_number == 1) 
+  {
+    adjustment = 6.0 / (111.32 * 1000.0);  // Add approximately 6 meters in latitude
+  } else if (point_number == 2) 
+  {
+    adjustment = -6.0 / (111.32 * 1000.0); // Add approximately -6 meters in latitude
+  }
+  adjusted_wp.latitude -= adjustment;
+  adjusted_wp.longitude -= adjustment / std::cos(adjusted_wp.latitude * M_PI / 180.0);  // Adjust longitude based on latitude
+
+  return adjusted_wp;
+}
+
 bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) {
   bool result = false;
   // Waypoint Mission : Initialization
@@ -321,16 +362,20 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   altitude_mutex_.lock();
   gps_position_.altitude = altitude_;
   altitude_mutex_.unlock();
-  convertToWaypoint_(gps_position_, waypoint);
+  // convertToWaypoint_(gps_position_, waypoint);
   position_mutex_.unlock();
-  waypointTask.mission_waypoint.push_back(waypoint);
+  // waypointTask.mission_waypoint.push_back(waypoint);
 
-  convertToWaypoint_(generate_mid_point_(nav_sat_fix), waypoint);
-  waypointTask.mission_waypoint.push_back(waypoint);
-  
-  convertToWaypoint_(nav_sat_fix, waypoint);
-  waypointTask.mission_waypoint.push_back(waypoint);
 
+
+    convertToWaypoint_(nav_sat_fix, waypoint);
+    waypointTask.mission_waypoint.push_back(waypoint);
+
+   convertToWaypoint_(generate_d_point_(nav_sat_fix,1), waypoint);
+   waypointTask.mission_waypoint.push_back(waypoint);
+
+   convertToWaypoint_(generate_d_point_(nav_sat_fix,2), waypoint);
+   waypointTask.mission_waypoint.push_back(waypoint);
 
   // Initialise the waypoint mission.
   dji_sdk::MissionWpUpload missionWaypointUpload;

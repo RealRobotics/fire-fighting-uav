@@ -65,6 +65,7 @@ private:
   void altitudeCallback_(const std_msgs::Float32::ConstPtr& message);
 
   sensor_msgs::NavSatFix generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix);
+  sensor_msgs::NavSatFix generate_d_point_(const sensor_msgs::NavSatFix& nav_sat_fix, const u_int8_t point_number);// Nabil
 
   ros::NodeHandle node_handle_;
   ros::ServiceClient control_authority_client_;
