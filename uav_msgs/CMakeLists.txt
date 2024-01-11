@@ -5,6 +5,7 @@ set(MSG_DEPS
   std_msgs
   actionlib_msgs
   sensor_msgs
+  geometry_msgs
 )
 
 find_package(catkin REQUIRED COMPONENTS
@@ -21,17 +22,26 @@ set(MSG_FILES
   PumpStatus.msg
   GimbalStatus.msg
   GpsLocationWithPrecision.msg
+  WaterStatus.msg
+  RelativePosition.msg
+  WallMetrics.msg
+  FireTarget.msg
+  VisualNavigation.msg
+
 )
 
 add_service_files(
   FILES
   EnableMission.srv
   DisableMission.srv
+  EnableVisualNavigation.srv
+  DisableVisualNavigation.srv
+  
 )
 
 add_action_files(
   DIRECTORY action
-  FILES FlyToWP.action SpecialMovement.action Spray.action
+  FILES FlyToWP.action SpecialMovement.action Spray.action RelativePosition.action
 )
 
 add_message_files(DIRECTORY msg FILES ${MSG_FILES})

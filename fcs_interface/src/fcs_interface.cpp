@@ -1,6 +1,7 @@
 #include "fcs_interface/fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
 #include "uav_msgs/BatteryPercentage.h"
+#include "uav_msgs/RelativePositionAction.h"
 
 #include <chrono>
 #include <cmath>
@@ -22,9 +23,16 @@
 #define LADEN_VELOCITY_M_PER_S (1.0)
 #define VELOCITY_RANGE_M_PER_S (5.0)
 
+// FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
+// : node_handle_(node_handle), fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
+//   special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false) {
+// }
+
 FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
-: node_handle_(node_handle), fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
-  special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false) {
+  : node_handle_(node_handle),
+    fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
+    special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false),
+    relative_position_server_(node_handle, "fcs_interface/relative_position", boost::bind(&FCS_Interface::setTarget_relative_position_, this, _1), false) {
 }
 
 bool FCS_Interface::start() {
@@ -52,6 +60,7 @@ bool FCS_Interface::start() {
   //start the action servers
   fly_server_.start();
   special_mv_server_.start();
+  relative_position_server_.start();
   
   //finally activate the drone, get control and wait for the home_location to be initialised (i.e. obtain first gps location)
   bool result = getReady_();
@@ -498,3 +507,97 @@ void FCS_Interface::altitudeCallback_(const std_msgs::Float32::ConstPtr& message
   altitude_ = message->data;
   altitude_mutex_.unlock();
 }
+void FCS_Interface::setTarget_relative_position_(const uav_msgs::RelativePositionGoalConstPtr &goal) // added for relative postion
+{
+    uav_msgs::RelativePosition relative_position_goal = goal->goal;
+
+    target_offset_x = relative_position_goal.xv_relative;
+    target_offset_y = relative_position_goal.yv_relative;
+    target_offset_z= relative_position_goal.zv_relative;
+    target_yaw = relative_position_goal.yawv_relative;
+}
+
+/*!
+ * This function calculates the difference between camera ENU target and current ENU position
+ * and sends the commands to the Position and Yaw control topic.
+ *
+ */
+void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &zCmd)
+{
+  xCmd = target_offset_x - relative_position.point.x;
+  yCmd = target_offset_y - relative_position.point.y;
+  zCmd = target_offset_z;
+
+  sensor_msgs::Joy controlPosYaw;
+  controlPosYaw.axes.push_back(xCmd);
+  controlPosYaw.axes.push_back(yCmd);
+  controlPosYaw.axes.push_back(zCmd);
+  controlPosYaw.axes.push_back(target_yaw);
+  ctrlPosYawPub.publish(controlPosYaw);
+
+  // 0.1m or 10cms is the minimum error to reach target in x y and z axes.
+  // This error threshold will have to change depending on aircraft/payload/wind conditions.
+  if (((std::abs(xCmd)) < 0.1) && ((std::abs(yCmd)) < 0.1) &&
+      (relative_position.point.z > (target_offset_z - 0.1)) && (relative_position.point.z < (target_offset_z + 0.1))) 
+    {
+       ROS_INFO("Drone at the Relative Position");
+    // if(target_set_state <= num_targets) {
+    //   ROS_INFO("%d of %d target(s) complete", target_set_state, num_targets);
+    //   target_set_state++;
+    // }
+    // else
+    // {
+    //   target_set_state = 0;
+    // }
+  }
+}
+void FCS_Interface::gps_health_Callback_(const std_msgs::UInt8::ConstPtr& msg) {
+  current_gps_health = msg->data;
+}
+
+void FCS_Interface::flight_status_Callback_(const std_msgs::UInt8::ConstPtr& msg)
+{
+  flight_status = msg->data;
+}
+
+void FCS_Interface::display_mode_Callback_(const std_msgs::UInt8::ConstPtr& msg)
+{
+  display_mode = msg->data;
+}
+
+bool FCS_Interface::set_reference_relative_position_()
+{
+  dji_sdk::SetLocalPosRef localPosReferenceSetter;
+  set_local_pos_reference.call(localPosReferenceSetter);
+
+  return (bool)localPosReferenceSetter.response.result;
+}
+/*!
+ * This function is called when local position data is available.
+ */
+void FCS_Interface::relative_position_Callback_(const geometry_msgs::PointStamped::ConstPtr& msg) 
+{
+  static ros::Time start_time = ros::Time::now();
+  ros::Duration elapsed_time = ros::Time::now() - start_time;
+  relative_position = *msg;
+  double xCmd, yCmd, zCmd;
+  sensor_msgs::Joy controlPosYaw;
+
+  // Down sampled to 50Hz loop
+  if (elapsed_time > ros::Duration(0.02)) 
+  {
+    start_time = ros::Time::now();
+
+      if (current_gps_health > 3) 
+      {
+        // setTarget_relative_position_(0, 0, 0, 0);
+        relative_position_ctrl_(xCmd, yCmd, zCmd);
+      }
+      else
+      {
+        ROS_INFO("Cannot execute Local Position Control");
+        ROS_INFO("Not enough GPS Satellites");
+
+      }
+    }
+  }

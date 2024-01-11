@@ -3,7 +3,7 @@
   <name>fcs_interface</name>
   <version>1.0.0</version>
   <description>The purpose of this package is to act as interface between different drives of drones and our code</description>
-  <maintainer email="l.mudrich@leeds.ac.uk">Lenka Mudrich</maintainer>
+  <maintainer email="n.shaukat@leeds.ac.uk">Nabil Shaukat</maintainer>
   <license>MIT</license>
 
   
@@ -11,6 +11,7 @@
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
   <depend>dji_sdk</depend>
   <depend>uav_msgs</depend>
   <depend>actionlib</depend>

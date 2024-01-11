@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(fcs_interface)
+project(water_monitor)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -9,18 +9,13 @@ project(fcs_interface)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  sensor_msgs
-  geometry_msgs
+  rospy
   std_msgs
-  dji_sdk
   uav_msgs
-  actionlib
-  actionlib_msgs
 )
 
-
 ## System dependencies are found with CMake's conventions
-find_package(DJIOSDK REQUIRED)
+# find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -110,8 +105,8 @@ find_package(DJIOSDK REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES mission_manager
-  CATKIN_DEPENDS roscpp sensor_msgs std_msgs dji_sdk uav_msgs geometry_msgs actionlib actionlib_msgs
+#  LIBRARIES water_monitor
+   CATKIN_DEPENDS roscpp rospy std_msgs uav_msgs
 #  DEPENDS system_lib
 )
 
@@ -122,13 +117,13 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include
+# include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/fcs_interface.cpp
+#   src/${PROJECT_NAME}/water_monitor.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -136,22 +131,10 @@ include_directories(
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/fcs_interface_node.cpp)
-
-set(SERVER_SOURCES
-  src/main.cpp
-  src/fcs_interface.cpp
-)
-
-add_executable(${PROJECT_NAME}_node ${SERVER_SOURCES})
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-add_executable(${PROJECT_NAME}_dummy_node src/dummy_main.cpp src/dummy_fcs_interface.cpp)
-add_dependencies(${PROJECT_NAME}_dummy_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_executable(${PROJECT_NAME}_node src/water_monitor_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -167,18 +150,6 @@ add_dependencies(${PROJECT_NAME}_dummy_node ${${PROJECT_NAME}_EXPORTED_TARGETS} 
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-
-target_link_libraries(
-  ${PROJECT_NAME}_node
-  ${catkin_LIBRARIES}
-  ${DJIOSDK_LIBRARIES}
-)
-
-target_link_libraries(
-  ${PROJECT_NAME}_dummy_node
-  ${catkin_LIBRARIES}
-)
-
 
 #############
 ## Install ##
@@ -227,7 +198,7 @@ target_link_libraries(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_fcs_interface.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_water_monitor.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
