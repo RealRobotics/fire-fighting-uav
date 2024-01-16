@@ -1,0 +1,4 @@
+std_msgs/Header header
+float32 wall_distance_left
+float32 wall_distance_center
+float32 wall_distance_right

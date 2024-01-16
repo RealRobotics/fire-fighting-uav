@@ -63,7 +63,7 @@ private:
   bool specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal);
   bool setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal);
 
-  void relative_position_ctrl_(double &xCmd, double &yCmd, double &zCmd); // added for relative postion
+  void relative_position_ctrl_(double &xCmd, double &yCmd, double &zCmd, double &yawCmd); // added for relative postion
   void setTarget_relative_position_(const uav_msgs::RelativePositionGoalConstPtr &goal)  ; // added for relative postion
   bool set_reference_relative_position_(); // added for relative postion
 
@@ -76,6 +76,7 @@ private:
   void gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message);
   void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
   void altitudeCallback_(const std_msgs::Float32::ConstPtr& message);
+  void attitudeCallback_(const geometry_msgs::QuaternionStamped::ConstPtr& msg); 
   
   void relative_position_Callback_(const geometry_msgs::PointStamped::ConstPtr& msg); //added for relative postion
   void display_mode_Callback_(const std_msgs::UInt8::ConstPtr& msg);  //added for relative postion
@@ -84,6 +85,7 @@ private:
 
   sensor_msgs::NavSatFix generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix);
   sensor_msgs::NavSatFix generate_d_point_(const sensor_msgs::NavSatFix& nav_sat_fix, const u_int8_t point_number);// Nabil
+
 
   ros::NodeHandle node_handle_;
   ros::ServiceClient control_authority_client_;
@@ -110,6 +112,7 @@ private:
   geometry_msgs::QuaternionStamped current_attitude; // add for the attitude
 
   bool loaded_ {false};
+  bool referenceSet_ = false;
   sensor_msgs::NavSatFix gps_position_;
   double altitude_ {0.0};
   float target_offset_x{0.0};

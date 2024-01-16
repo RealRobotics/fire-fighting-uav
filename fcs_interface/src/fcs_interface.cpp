@@ -2,6 +2,7 @@
 #include "uav_msgs/SpecialMovement.h"
 #include "uav_msgs/BatteryPercentage.h"
 #include "uav_msgs/RelativePositionAction.h"
+#include <tf/transform_datatypes.h>
 
 #include <chrono>
 #include <cmath>
@@ -231,7 +232,8 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
   } else {
     bool preempted {false};
     ros::Duration feedback_period(0.1);
-    while(!droneWithinRadius_(goal->goal.loc_precision, nav_sat_fix) && ros::ok()) {
+    while(!droneWithinRadius_(goal->goal.loc_precision, nav_sat_fix) && ros::ok()) 
+    {
 
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;
@@ -507,50 +509,106 @@ void FCS_Interface::altitudeCallback_(const std_msgs::Float32::ConstPtr& message
   altitude_ = message->data;
   altitude_mutex_.unlock();
 }
+
 void FCS_Interface::setTarget_relative_position_(const uav_msgs::RelativePositionGoalConstPtr &goal) // added for relative postion
 {
     uav_msgs::RelativePosition relative_position_goal = goal->goal;
-
+  
     target_offset_x = relative_position_goal.xv_relative;
     target_offset_y = relative_position_goal.yv_relative;
     target_offset_z= relative_position_goal.zv_relative;
     target_yaw = relative_position_goal.yawv_relative;
+
+    // current_attitude is a geometry_msgs::Quaternion message
+    tf::Quaternion q(
+    current_attitude.quaternion.x,
+    current_attitude.quaternion.y,
+    current_attitude.quaternion.z,
+    current_attitude.quaternion.w
+  );
+
+    tf::Matrix3x3 m(q);
+
+    double roll, pitch, initial_yaw,yawC=0;
+    m.getRPY(roll, pitch, initial_yaw);
+
+    if (current_gps_health > 3) 
+    {
+      if (set_reference_relative_position_())
+      {
+        relative_position_ctrl_(relative_position.point.x, relative_position.point.y, relative_position.point.z, yawC);
+        double error_x = target_offset_x;
+        double error_y = target_offset_y;
+        double error_yaw = target_yaw ;
+        double yaw_offset_InertialToBody = initial_yaw - yawC;
+        double yawC = yaw_offset_InertialToBody - error_yaw;
+        double xC =  cos(yaw_offset_InertialToBody) * error_x - sin(yaw_offset_InertialToBody) * error_y;
+        double yC =  sin(yaw_offset_InertialToBody) * error_x + cos(yaw_offset_InertialToBody) * error_y;
+        double xCom= xC + relative_position.point.x;
+        double yCom= yC + relative_position.point.y;
+        relative_position_ctrl_(xCom, yCom , relative_position.point.z, yawC);
+      }
+      else 
+      {
+          ROS_INFO("Local Reference not Set");
+      }
+    }
+    else
+    {
+      ROS_INFO("Cannot execute Local Position Control");
+      ROS_INFO("Not enough GPS Satellites");
+    }
 }
 
 /*!
- * This function calculates the difference between camera ENU target and current ENU position
+ * This function calculates the difference between camera target and current  position
  * and sends the commands to the Position and Yaw control topic.
  *
  */
-void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &zCmd)
+void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &zCmd, double &yawCmd)
 {
-  xCmd = target_offset_x - relative_position.point.x;
-  yCmd = target_offset_y - relative_position.point.y;
-  zCmd = target_offset_z;
+  const float pos_threshold = 0.1;
+  bool at_target = false;
 
-  sensor_msgs::Joy controlPosYaw;
-  controlPosYaw.axes.push_back(xCmd);
-  controlPosYaw.axes.push_back(yCmd);
-  controlPosYaw.axes.push_back(zCmd);
-  controlPosYaw.axes.push_back(target_yaw);
-  ctrlPosYawPub.publish(controlPosYaw);
-
-  // 0.1m or 10cms is the minimum error to reach target in x y and z axes.
-  // This error threshold will have to change depending on aircraft/payload/wind conditions.
-  if (((std::abs(xCmd)) < 0.1) && ((std::abs(yCmd)) < 0.1) &&
-      (relative_position.point.z > (target_offset_z - 0.1)) && (relative_position.point.z < (target_offset_z + 0.1))) 
+  while (!at_target && ros::ok())
+  {
+    if (current_gps_health > 3)
     {
-       ROS_INFO("Drone at the Relative Position");
-    // if(target_set_state <= num_targets) {
-    //   ROS_INFO("%d of %d target(s) complete", target_set_state, num_targets);
-    //   target_set_state++;
-    // }
-    // else
-    // {
-    //   target_set_state = 0;
-    // }
+      xCmd = target_offset_x - relative_position.point.x;
+      yCmd = target_offset_y - relative_position.point.y;
+      zCmd = target_offset_z;
+
+      sensor_msgs::Joy controlPosYaw;
+      controlPosYaw.axes.push_back(xCmd);
+      controlPosYaw.axes.push_back(yCmd);
+      controlPosYaw.axes.push_back(zCmd);
+      controlPosYaw.axes.push_back(target_yaw);
+      ctrlPosYawPub.publish(controlPosYaw);
+    }
+    else
+    {
+      ROS_INFO("Cannot execute Relative Position Control");
+      ROS_INFO("Not enough GPS Satellites");
+      relative_position_result_.at_target = false;
+       break;  // exit the loop if GPS health is not sufficient
+    }
+
+    bool ck1 = (std::abs(xCmd) > pos_threshold);
+    bool ck2 = (std::abs(yCmd) > pos_threshold);
+    bool ck3 = (relative_position.point.z < (target_offset_z - pos_threshold));
+    bool ck4 = (relative_position.point.z > (target_offset_z + pos_threshold));
+
+    at_target = !(ck1 || ck2 || ck3 || ck4);
+   
+    ros::Duration(0.02).sleep();
+    ros::spinOnce();
   }
+
+  relative_position_result_.at_target = at_target;
+  relative_position_server_.setSucceeded(relative_position_result_);
 }
+
+
 void FCS_Interface::gps_health_Callback_(const std_msgs::UInt8::ConstPtr& msg) {
   current_gps_health = msg->data;
 }
@@ -565,39 +623,35 @@ void FCS_Interface::display_mode_Callback_(const std_msgs::UInt8::ConstPtr& msg)
   display_mode = msg->data;
 }
 
+/**
+ * Sets the local position reference if not already set and returns true if successful, false otherwise.
+ * Updates the internal flag 'referenceSet_' to reflect the state of the local position reference.
+ */
 bool FCS_Interface::set_reference_relative_position_()
 {
-  dji_sdk::SetLocalPosRef localPosReferenceSetter;
-  set_local_pos_reference.call(localPosReferenceSetter);
+    if (!referenceSet_)
+    {
+        dji_sdk::SetLocalPosRef localPosReferenceSetter;
+        set_local_pos_reference.call(localPosReferenceSetter);
 
-  return (bool)localPosReferenceSetter.response.result;
+        // Update the flag to indicate that the reference has been set
+        referenceSet_ = static_cast<bool>(localPosReferenceSetter.response.result);
+
+        // Return the result of the service call
+        return referenceSet_;
+    }
+
+    // No need for an explicit else block, it will return referenceSet_ by default
+    return referenceSet_;
 }
+
 /*!
  * This function is called when local position data is available.
  */
 void FCS_Interface::relative_position_Callback_(const geometry_msgs::PointStamped::ConstPtr& msg) 
 {
-  static ros::Time start_time = ros::Time::now();
-  ros::Duration elapsed_time = ros::Time::now() - start_time;
   relative_position = *msg;
-  double xCmd, yCmd, zCmd;
-  sensor_msgs::Joy controlPosYaw;
-
-  // Down sampled to 50Hz loop
-  if (elapsed_time > ros::Duration(0.02)) 
-  {
-    start_time = ros::Time::now();
-
-      if (current_gps_health > 3) 
-      {
-        // setTarget_relative_position_(0, 0, 0, 0);
-        relative_position_ctrl_(xCmd, yCmd, zCmd);
-      }
-      else
-      {
-        ROS_INFO("Cannot execute Local Position Control");
-        ROS_INFO("Not enough GPS Satellites");
-
-      }
-    }
-  }
+}
+void FCS_Interface::attitudeCallback_(const geometry_msgs::QuaternionStamped::ConstPtr& msg) {
+  current_attitude = *msg;
+}

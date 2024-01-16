@@ -1,0 +1,8 @@
+<launch>
+  <!-- Launch spa_node -->
+  <node name="spa_node" pkg="sprayaim1" type="spa_node.py" output="screen" />
+
+  <!-- Launch gimbal_srv -->
+  <node name="control_server" pkg="sprayaim1" type="pgmctrl_srv.py" output="screen" />
+
+</launch>

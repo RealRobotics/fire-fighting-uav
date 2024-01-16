@@ -1,0 +1,8 @@
+#goal definition
+uav_msgs/RelativePosition goal
+---
+#result definition
+bool at_target
+---
+#feedback
+geometry_msgs/Pose current_pose

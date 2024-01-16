@@ -1,0 +1,12 @@
+# When running is true, the pump is running. When false, the pump is stopped.
+
+# Action definition for Pump control
+bool start_pump  # Set to true to start the pump or false to stop the pump
+
+---
+# Result definition for Pump control
+bool running  # Indicates whether the pump is running (true) or stopped (false)
+
+---
+# Feedback for Pump control
+bool running  # Indicates the current status of the pump (true if running, false if stopped)

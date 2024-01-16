@@ -1,0 +1,16 @@
+# Goal definition for Gimbal control
+# Note: gimbal center is 0. Pitch fully up = 90, fully down = -90.
+# Yaw (when looking forward over the gimbal): fully right = 90, fully left = -90.
+
+int16 pitch  # The desired pitch angle in degrees
+int16 yaw    # The desired yaw angle in degrees
+
+---
+# Result definition for Gimbal control
+int16 pitch  # The final achieved pitch angle in degrees
+int16 yaw    # The final achieved yaw angle in degrees
+
+---
+# Feedback for Gimbal control
+int16 pitch  # The current pitch angle in degrees
+int16 yaw    # The current yaw angle in degrees

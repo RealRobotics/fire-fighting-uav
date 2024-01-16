@@ -32,7 +32,7 @@ class WaterMonitor:
             # Publish an initial water status message indicating "full"
             initial_water_status = WaterStatus()
             initial_water_status.header.stamp = rospy.Time.now()
-            initial_water_status.status = WaterStatus.WaterFull
+            initial_water_status.status = WaterStatus.WaterOK
             self.publish_water_status(initial_water_status)
             rospy.loginfo('Intial condition water is full.')
 
@@ -51,7 +51,7 @@ class WaterMonitor:
             rospy.loginfo('Counter Value: %s' % self.counter_value)
             water_status = WaterStatus()
             water_status.header.stamp = rospy.Time.now()
-            water_status.status = WaterStatus.WaterFull
+            water_status.status = WaterStatus.WaterOK
             self.publish_water_status(water_status)
 
         elif self.pump_status == PumpStatus.OFF and self.counter_value > 0:
@@ -59,7 +59,7 @@ class WaterMonitor:
             rospy.loginfo('Counter Value: %s' % self.counter_value)
             water_status = WaterStatus()
             water_status.header.stamp = rospy.Time.now()
-            water_status.status = WaterStatus.WaterFull
+            water_status.status = WaterStatus.WaterOK
             self.publish_water_status(water_status)
             rospy.loginfo('Pump is OFF and Water is NOT Empty!,counter is greater than zero')
 
@@ -67,7 +67,7 @@ class WaterMonitor:
             # If the counter reaches zero or less, publish water empty status
             water_status = WaterStatus()
             water_status.header.stamp = rospy.Time.now()
-            water_status.status = WaterStatus.WaterEmpty
+            water_status.status = WaterStatus.WaterLow
             self.publish_water_status(water_status)
             rospy.loginfo('Water is empty! counter is zero')
             rospy.loginfo('Counter Value: %s' % self.counter_value)
