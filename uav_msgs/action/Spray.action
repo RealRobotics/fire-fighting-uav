@@ -1,9 +1,8 @@
 #goal definition
-bool spray
+uav_msgs/PumpStatus pump_control
 ---
 #result definition
 bool done
 ---
 #feedback
-uav_msgs/PumpStatus pump_status
-uav_msgs/GimbalStatus gimbal_status
+uav_msgs/PumpStatus pump_feedback

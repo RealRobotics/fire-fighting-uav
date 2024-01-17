@@ -101,5 +101,3 @@ def gimbal_control_client(yaw_angle, pitch_angle):
     result_thread = threading.Thread(target=wait_for_result)
     result_thread.start()
     result_thread.join()  # Wait for the result thread to finish before continuing
-
-# Now you can call gimbal_control_client(yaw, pitch) to send the goal

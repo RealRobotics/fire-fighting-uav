@@ -27,6 +27,9 @@ set(MSG_FILES
   WallMetrics.msg
   FireTarget.msg
   VisualNavigation.msg
+  iafiretarget.msg
+  iapumpstatus.msg
+  iawaterstatus.msg
 
 )
 

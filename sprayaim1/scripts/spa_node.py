@@ -21,6 +21,8 @@ from pump_clientm import pump_control
 from gimbal_clientm import gimbal_control_client
 from uav_msgs.msg  import PumpStatus, iapumpstatus
 from uav_msgs.msg  import WaterStatus, iawaterstatus
+from uav_msgs.msg import SprayGoal, SprayResult, SprayFeedback,SprayAction
+import actionlib
 
 # Define the possible states of the state machine
 STATE_OFF = 0
@@ -28,7 +30,7 @@ STATE_ON = 1
 
 # Initialize the state to OFF
 current_state = STATE_OFF
-water_level_status = "OK"
+water_level_status = WaterStatus.WaterOK
 
 pump_pub = rospy.Publisher('pump_status', String, queue_size=10)
 gimbal_pub = rospy.Publisher('gimbal_status', String, queue_size=10)
@@ -68,46 +70,89 @@ def dwm_callback(data):
         water_level_status =  WaterStatus.WaterLow
         rospy.loginfo("Water Level Low")  # Display water level status
 
-def dfp_callback(data):
+# def dfp_callback(data):
+#     """
+#     Callback function for receiving pump control commands.
+#     Manages the pump's state based on received data and water level status.
+#     Publishes pump status.
+#     """
+#     global current_state, water_level_status
+#     # Extract information from the received message
+#     is_true = True  # accepted (True/False)
+#     sequence_id = data.header.seq
+#     received_time = data.header.stamp
+#     frame_id = data.header.frame_id
+#     pump_status = data.pump_status
+
+#     # Create and publish information to the 'iapumpstatus' topic
+#     iapumpstatus_msg = iapumpstatus()
+#     iapumpstatus_msg.is_true = is_true
+#     iapumpstatus_msg.sequence_id = sequence_id
+#     iapumpstatus_msg.received_time = received_time
+#     iapumpstatus_msg.frame_id = frame_id
+#     iapumpstatus_msg.pump_status = pump_status
+
+#     iafp_pub.publish(iapumpstatus_msg)
+
+#     # Turn ON/OFF pump based on received data and water level status
+#     # If data indicates "on" and pump is OFF and water level is OK, turn ON the pump
+#     if data.pump_status == PumpStatus.ON and current_state == STATE_OFF and water_level_status == WaterStatus.WaterOK:
+#         current_state = STATE_ON
+#         pump_control(True)  # Start the pump (True)
+#         rospy.loginfo("Pump is ON.")
+#     # If data indicates "off" and pump is ON or water level is Low, turn OFF the pump
+#     elif data.pump_status == PumpStatus.OFF and (current_state == STATE_ON or water_level_status == WaterStatus.WaterLow):
+#         current_state = STATE_OFF
+#         pump_control(False)  # Start the pump (True)
+#         rospy.loginfo("Pump is OFF.")
+#     # Pump status output
+#     if current_state == STATE_ON:
+#         pump_pub.publish("on")  # Publish "on" status
+#     elif current_state == STATE_OFF:
+#         pump_pub.publish("off")  # Publish "off" status
+        
+def spray_server_Callback(goal):
     """
-    Callback function for receiving pump control commands.
-    Manages the pump's state based on received data and water level status.
-    Publishes pump status.
+    Callback function for handling pump control goals.
     """
     global current_state, water_level_status
-    # Extract information from the received message
-    is_true = True  # accepted (True/False)
-    sequence_id = data.header.seq
-    received_time = data.header.stamp
-    frame_id = data.header.frame_id
-    pump_status = data.pump_status
+
+    # Extract goal information
+    pump_goal_status = goal.pump_control.status
 
     # Create and publish information to the 'iapumpstatus' topic
     iapumpstatus_msg = iapumpstatus()
-    iapumpstatus_msg.is_true = is_true
-    iapumpstatus_msg.sequence_id = sequence_id
-    iapumpstatus_msg.received_time = received_time
-    iapumpstatus_msg.frame_id = frame_id
-    iapumpstatus_msg.pump_status = pump_status
+    iapumpstatus_msg.is_true = True  # accepted (True/False)
+    iapumpstatus_msg.sequence_id = goal.header.seq
+    iapumpstatus_msg.received_time = goal.header.stamp
+    iapumpstatus_msg.frame_id = goal.header.frame_id
+    iapumpstatus_msg.pump_status = pump_goal_status
 
     iafp_pub.publish(iapumpstatus_msg)
 
     # Turn ON/OFF pump based on received data and water level status
     # If data indicates "on" and pump is OFF and water level is OK, turn ON the pump
-    if data.pump_status == PumpStatus.ON and current_state == STATE_OFF and water_level_status == WaterStatus.WaterOK:
+    if pump_goal_status == PumpStatus.ON and current_state == STATE_OFF and water_level_status == WaterStatus.WaterOK:
         current_state = STATE_ON
-        pump_control(True)  # Start the pump (True)
+        result.done =pump_control(True)  # Start the pump (True)
         rospy.loginfo("Pump is ON.")
     # If data indicates "off" and pump is ON or water level is Low, turn OFF the pump
-    elif data.pump_status == PumpStatus.OFF and (current_state == STATE_ON or water_level_status == WaterStatus.WaterLow):
+    elif pump_goal_status == PumpStatus.OFF and (current_state == STATE_ON or water_level_status == WaterStatus.WaterLow):
         current_state = STATE_OFF
-        pump_control(False)  # Start the pump (True)
+        result.done=pump_control(False)  # Start the pump (True)
         rospy.loginfo("Pump is OFF.")
     # Pump status output
     if current_state == STATE_ON:
         pump_pub.publish("on")  # Publish "on" status
     elif current_state == STATE_OFF:
         pump_pub.publish("off")  # Publish "off" status
+
+    # Simulate pump control result
+    result = spray_server.Result()
+    result.done
+    # Send result to the action client
+    if result.done and spray_server.is_active():
+        spray_server.set_succeeded(result)
 
 def dft_callback(data):
     """
@@ -166,14 +211,19 @@ def dft_callback(data):
         rospy.loginfo("Detected")
         gimbal_pub.publish("Idle")
 
-
 def spa_node():
     rospy.init_node('spa_node', anonymous=False)
 
     # Subscribe to the topics of interest
     rospy.Subscriber('dwm_node_topic', WaterStatus, dwm_callback)
-    rospy.Subscriber('dfp_node_topic', PumpStatus, dfp_callback)
+    #rospy.Subscriber('dfp_node_topic', PumpStatus, dfp_callback)
     rospy.Subscriber('dft_node_topic', FireTarget, dft_callback)
+    # Create an action server for Spray
+    global spray_server
+    spray_server = actionlib.SimpleActionServer('spray_planner', SprayAction, execute_cb=spray_server_Callback, auto_start=False)
+    spray_server.start()
+
+    
 
     rospy.spin()  # Keep the node running
 
