@@ -145,6 +145,9 @@ src/fly_to_wp_bt_action.cpp
 src/is_battery_required_status.cpp 
 src/special_movement_bt_action.cpp
 src/is_mission_enabled.cpp
+src/check_fire_status.cpp
+src/check_visual_status.cpp
+src/check_water_status.cpp
 src/repeat_over_vector_until_failure.cpp)
 
 ## Rename C++ executable without prefix

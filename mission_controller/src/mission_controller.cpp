@@ -31,6 +31,7 @@
 #include "mission_controller/is_battery_required_status.h"
 #include "mission_controller/is_mission_enabled.h"
 #include "mission_controller/repeat_over_vector_until_failure.h"
+#include "mission_controller/check_fire_status.h"
 
 /** This is a constructor
  * @param nh - ros node handle

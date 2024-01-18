@@ -54,3 +54,4 @@ def pump_control(start_pump):
         rospy.loginfo("Pump Action Completed: Pump is Running")
     else:
         rospy.loginfo("Pump Action Completed: Pump is Stopped")
+    return result
