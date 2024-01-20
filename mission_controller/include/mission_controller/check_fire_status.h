@@ -18,46 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef MISSION_CONTROLLER_H
-#define MISSION_CONTROLLER_H
+#ifndef CHECK_FIRE_STATUS_H
+#define CHECK_FIRE_STATUS_H
 
-#include <string>
-#include <jsoncpp/json/json.h>
+#include <mutex>
 
-#include "behaviortree_cpp_v3/bt_factory.h"
+#include "behaviortree_cpp_v3/condition_node.h"
+#include <behaviortree_cpp_v3/bt_factory.h>
 #include "ros/ros.h"
-#include "uav_msgs/EnableMission.h"
-#include "uav_msgs/DisableMission.h"
+#include "uav_msgs/FireTarget.h"
 
+class CheckFireStatus : public BT::ConditionNode {
 
-class MissionController {
 public:
-  MissionController(ros::NodeHandle nh, std::string tree_file, std::string waypoints_file);
-  void run();
+  CheckFireStatus(const std::string & instance_name, const BT::NodeConfiguration & conf,
+              ros::NodeHandle& nh);
+
+  BT::NodeStatus tick() override;
+
+  static BT::PortsList providedPorts();
+
+  static void Register(BT::BehaviorTreeFactory& factory,
+                         const std::string& registration_ID,
+                         ros::NodeHandle& node_handle);
 
 private:
-  void registerNodes_();
-  void createTree_(std::string tree_file, std::string waypoints_file);
-  void loadWaypoints_(std::string path);
-  void loadBatteryLimits_();
-  void loadSpecialMovementsCmds_();
-  void loadfirestatus_();
-  void loadgimbalstatus_();
-  void loadwaterstatus_();
-  void loadvisualstatus_();
-  void loadwatermonitorcmds_();
-  bool enableMission_(uav_msgs::EnableMission::Request  &req,
-    uav_msgs::EnableMission::Response &res);
-  bool disableMission_(uav_msgs::DisableMission::Request  &req,
-    uav_msgs::DisableMission::Response &res);
-
+  void FireStatusCallback_(const uav_msgs::FireTarget::ConstPtr& message);
   ros::NodeHandle nh_;
-  ros::ServiceServer enable_service_;
-  ros::ServiceServer disable_service_;
+  ros::Subscriber fire_status_sub_;
+  std::mutex status_mtx_;
+  uint8_t current_status_ {uav_msgs::FireTarget::NO_FIRE};
+  int required_status_ {uav_msgs::FireTarget::NO_FIRE};
 
-  BT::Blackboard::Ptr blackboard_;
-  BT::BehaviorTreeFactory factory_;
-  BT::Tree tree_;
 };
 
-#endif //MISSION_CONTROLLER_H
+#endif //CHECK_FIRE_STATUS

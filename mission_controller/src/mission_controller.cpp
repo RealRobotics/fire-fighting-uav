@@ -25,6 +25,13 @@
 
 #include "uav_msgs/SpecialMovement.h"
 #include "uav_msgs/BatteryStatus.h"
+#include "uav_msgs/GimbalStatus.h"
+#include "uav_msgs/VisualNavigation.h"
+#include "uav_msgs/WaterStatus.h"
+#include "uav_msgs/FireTarget.h"
+#include "uav_msgs/PumpStatus.h"
+
+
 
 #include "mission_controller/fly_to_wp_bt_action.h"
 #include "mission_controller/special_movement_bt_action.h"
@@ -32,6 +39,11 @@
 #include "mission_controller/is_mission_enabled.h"
 #include "mission_controller/repeat_over_vector_until_failure.h"
 #include "mission_controller/check_fire_status.h"
+#include "mission_controller/check_gimbal_status.h"
+#include "mission_controller/check_visual_status.h"
+#include "mission_controller/check_water_status.h"
+#include "mission_controller/spray_bt_action.h"
+#include "mission_controller/enable_water_monitor_srv.h"
 
 /** This is a constructor
  * @param nh - ros node handle
@@ -72,16 +84,23 @@ void MissionController::run() {
 void MissionController::registerNodes_() {
   BT::RegisterRosAction<FlyToWpBTAction>(factory_, "FlyToWpBTAction", nh_);
   BT::RegisterRosAction<SpecialMovementBTAction>(factory_, "SpecialMovementBTAction", nh_);
+  BT::RegisterRosAction<SprayBTAction>(factory_,"SprayBTAction", nh_);
+  BT::RegisterRosService<EnableWaterMonitorAction>(factory_, "EnableWaterMonitor", nh_);
   IsBatteryRequiredStatus::Register(factory_, "IsBatteryRequiredStatus", nh_);
   IsMissionEnabled::Register(factory_, "IsMissionEnabled", nh_);
   RepeatOverVectorUntilFailure::Register(factory_, "RepeatOverVectorUntilFailure");
+  CheckFireStatus::Register(factory_, "CheckFireStatus", nh_);
+  CheckGimbalStatus::Register(factory_, "CheckGimbalStatus", nh_);
+  CheckVisualStatus::Register(factory_, "CheckVisualStatus", nh_);
+  CheckWaterStatus::Register(factory_, "CheckWaterStatus", nh_);
+
 }
 
 /**
  * This method does 4 things:
  * a) creates the BT tree from file
  * b) loads waypoints to BT storage (= blackboard)
- * c) loads constants for battery limits to BT storage
+ * c) loads constants for battery limits to BT storage, firestatus, gimbalstatus,visualstatus,waterstatus.
  * d) loads constants for special movements to BT storage
  * @param tree_file path to .xml file containing BT specification
  * @param waypoints_file path to .json file containing the search pattern
@@ -93,6 +112,11 @@ void MissionController::createTree_(std::string tree_file, std::string waypoints
   loadWaypoints_(waypoints_file);
   loadBatteryLimits_();
   loadSpecialMovementsCmds_();  
+  loadfirestatus_();
+  loadgimbalstatus_();
+  loadvisualstatus_();
+  loadwaterstatus_();
+  loadwatermonitorcmds_();
 }
 
 /**
@@ -149,6 +173,54 @@ void MissionController::loadSpecialMovementsCmds_() {
   blackboard_->set("take_off", uint8_t(uav_msgs::SpecialMovement::TAKE_OFF));
   blackboard_->set("land", uint8_t(uav_msgs::SpecialMovement::LAND));
   blackboard_->set("go_home", uint8_t(uav_msgs::SpecialMovement::GO_HOME));
+}
+
+/**
+ * The constants for fire status are loaded here. The reasoning is same as in the above method.
+*/
+void MissionController::loadfirestatus_()
+{
+  blackboard_->set("no_fire", uint8_t(uav_msgs::FireTarget::NO_FIRE));
+  blackboard_->set("detected", uint8_t(uav_msgs::FireTarget::DETECTED));
+  blackboard_->set("tracked", uint8_t(uav_msgs::FireTarget::TRACKED));
+}
+
+/**
+ * The constants for Gimbal status are loaded here. The reasoning is same as in the above method.
+*/
+void MissionController::loadgimbalstatus_()
+{
+  blackboard_->set("idle", uint8_t(uav_msgs::GimbalStatus::IDLE));
+  blackboard_->set("tracking", uint8_t(uav_msgs::GimbalStatus::TRACKING));
+  blackboard_->set("out_of_boundry", uint8_t(uav_msgs::GimbalStatus::OUT_OF_BOUNDARY));
+}
+
+/**
+ * The constants for visual status are loaded here. The reasoning is same as in the above method.
+*/
+void MissionController::loadvisualstatus_()
+{
+  blackboard_->set("offline", uint8_t(uav_msgs::VisualNavigation::OFFLINE));
+  blackboard_->set("notcentred", uint8_t(uav_msgs::VisualNavigation::NOTCENTRED));
+  blackboard_->set("centred", uint8_t(uav_msgs::VisualNavigation::CENTRED));
+}
+
+/**
+ * The constants for water status are loaded here. The reasoning is same as in the above method.
+*/
+void MissionController::loadwaterstatus_()
+{
+  blackboard_->set("water_ok", uint8_t(uav_msgs::WaterStatus::WaterOK));
+  blackboard_->set("water_low", uint8_t(uav_msgs::WaterStatus::WaterLow));
+}
+
+/**
+ * The constants for water monitor cmd are loaded here. The reasoning is same as in the above method.
+*/
+void MissionController::loadwatermonitorcmds_()
+{
+  blackboard_->set("pump_on", uint8_t(uav_msgs::PumpStatus::ON));
+  blackboard_->set("pump_off", uint8_t(uav_msgs::PumpStatus::OFF));
 }
 
 /**

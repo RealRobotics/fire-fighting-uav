@@ -38,6 +38,7 @@ add_service_files(
   EnableMission.srv
   DisableMission.srv
   EnableVisualNavigation.srv
+  EnableWaterMonitor.srv
   DisableVisualNavigation.srv
   
 )

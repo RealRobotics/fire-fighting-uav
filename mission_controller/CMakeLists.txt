@@ -148,6 +148,9 @@ src/is_mission_enabled.cpp
 src/check_fire_status.cpp
 src/check_visual_status.cpp
 src/check_water_status.cpp
+src/check_gimbal_status.cpp
+src/spray_bt_action.cpp
+src/enable_water_monitor_srv.cpp
 src/repeat_over_vector_until_failure.cpp)
 
 ## Rename C++ executable without prefix

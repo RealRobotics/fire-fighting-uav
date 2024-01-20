@@ -1,0 +1,8 @@
+#constant for tasks
+uint8 STATUS_PUMP_OFF = 0
+uint8 STATUS_PUMP_ON = 1
+
+#request
+uint8 status    # see constants above for possible tasks
+---
+bool result
