@@ -39,7 +39,7 @@
  CheckFireStatus:: CheckFireStatus(const std::string & instance_name, const BT::NodeConfiguration & conf,
               ros::NodeHandle& nh)
   : BT::ConditionNode(instance_name, conf), nh_ (nh) {
-    fire_status_sub_ = nh_.subscribe<uav_msgs::FireTarget>("dft_node//dft_node_topic", 10,
+    fire_status_sub_ = nh_.subscribe<uav_msgs::FireTarget>("dft_node/dft_node_topic", 10,
                                                                             &CheckFireStatus::FireStatusCallback_, this);
     }
 

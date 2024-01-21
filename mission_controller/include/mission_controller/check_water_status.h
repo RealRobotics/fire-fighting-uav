@@ -43,7 +43,7 @@ public:
                          ros::NodeHandle& node_handle);
 
 private:
-  void WaterStatusCallback_(const uav_msgs::WaterStatus::ConstPtr& message);
+  void WaterStatusCallback_(const uav_msgs::WaterStatus::ConstPtr& msg);
   ros::NodeHandle nh_;
   ros::Subscriber water_status_sub_;
   std::mutex status_mtx_;

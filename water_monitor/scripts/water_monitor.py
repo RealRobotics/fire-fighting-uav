@@ -3,6 +3,7 @@
 import rospy
 from std_msgs.msg import UInt8
 from uav_msgs.msg import PumpStatus, WaterStatus
+from uav_msgs.srv import EnableWaterMonitor, EnableWaterMonitorResponse
 import threading
 
 class WaterMonitor:
@@ -12,41 +13,42 @@ class WaterMonitor:
         self.counter_value = initial_counter_value
         self.intial_counter=initial_counter_value
         self.pump_status = PumpStatus.OFF 
-        self.pub_water_status = rospy.Publisher('water_status_topic', WaterStatus, queue_size=10)
-        rospy.Subscriber('pump_status_topic', PumpStatus, self.pump_status_callback)
-
+        self.pub_water_status = rospy.Publisher('water_monitor_node/water_status_topic', WaterStatus, queue_size=10)
+        # rospy.Subscriber('pump_status_topic', PumpStatus, self.pump_status_callback)
+        service = rospy.Service('EnableWaterMonitor', EnableWaterMonitor, self.handle_enable_water_monitor)
+        
         # Create a separate thread for the publisher 
         self.publisher_thread = threading.Thread(target=self.publisher_thread_function, name='water_status_threard')
         self.publisher_thread.daemon = True  # The thread will exit when the main program exits
         self.publisher_thread.start()
 
-    def pump_status_callback(self, msg):
+    def handle_enable_water_monitor(self, req):
         previous_pump_status = self.pump_status  # Save previous pump status
-        self.pump_status = msg.status
+        self.pump_status = req.status
 
         if self.pump_status != previous_pump_status:
-            # If the pump status changes, take appropriate actions
-            if self.pump_status == PumpStatus.ON and self.counter_value > 0:
-                # If the pump is turned on, start the down counter
-                self.start_down_counter()
-                rospy.loginfo('Pump is ON from OFF. Down counter started.')
-            elif self.pump_status == PumpStatus.ON and self.counter_value  <= 0:
-                rospy.loginfo('Pump OFF to ON but water empty.')
+            # Pump status changed
+            rospy.loginfo("Pump status changed: Previous={}, New={}".format(previous_pump_status, self.pump_status))
+
+            if self.pump_status == PumpStatus.ON:
+                if self.counter_value > 0:
+                    # Start down counter
+                    self.start_down_counter()
+                    rospy.loginfo('Pump is ON from OFF. Down counter started.')
+                else:
+                    rospy.loginfo('Pump OFF to ON but water is empty.')
             elif self.pump_status == PumpStatus.OFF:
-                # If the pump is turned off, stop the down counter
-                rospy.loginfo('Pump is OFF from ON .')
+                # Pump is turned off
+                rospy.loginfo('Pump is OFF from ON.')
+            else:
+                return EnableWaterMonitorResponse(False)  # Unknown pump status, return failure
+
         elif self.pump_status == PumpStatus.OFF and self.counter_value == self.intial_counter:
-            # Publish an initial water status message indicating "full"
-            # initial_water_status = WaterStatus()
-            # initial_water_status.header.stamp = rospy.Time.now()
-            # initial_water_status.status = WaterStatus.WaterOK
-            # self.publish_water_status(initial_water_status)
-            rospy.loginfo('Intial condition water is full.')
+            rospy.loginfo('Pump OFF send by client and Water is full.')
 
-        # Print the current pump status and counter value
-        # rospy.loginfo('Pump Status: %s' % ('ON' if self.pump_status == PumpStatus.ON else 'OFF'))
-        # rospy.loginfo('Counter Value: %s' % self.counter_value)
+        return EnableWaterMonitorResponse(True)  # Successful response
 
+    
     def start_down_counter(self):
         # Start the down counter timer
         rospy.Timer(rospy.Duration(1), self.down_counter_callback, oneshot=False)
@@ -56,26 +58,13 @@ class WaterMonitor:
             # If the pump is still ON, decrease the counter value
             self.counter_value -= 1
             rospy.loginfo('Counter Value: %s' % self.counter_value)
-            # water_status = WaterStatus()
-            # water_status.header.stamp = rospy.Time.now()
-            # water_status.status = WaterStatus.WaterOK
-            # self.publish_water_status(water_status)
 
         elif self.pump_status == PumpStatus.OFF and self.counter_value > 0:
             # If the pump is still ON, decrease the counter value
             rospy.loginfo('Counter Value: %s' % self.counter_value)
-            # water_status = WaterStatus()
-            # water_status.header.stamp = rospy.Time.now()
-            # water_status.status = WaterStatus.WaterOK
-            # self.publish_water_status(water_status)
             rospy.loginfo('Pump is OFF and Water is NOT Empty!,counter is greater than zero')
 
         elif self.counter_value <= 0:
-            # If the counter reaches zero or less, publish water empty status
-            # water_status = WaterStatus()
-            # water_status.header.stamp = rospy.Time.now()
-            # water_status.status = WaterStatus.WaterLow
-            # self.publish_water_status(water_status)
             rospy.loginfo('Water is empty! counter is zero')
             rospy.loginfo('Counter Value: %s' % self.counter_value)
 

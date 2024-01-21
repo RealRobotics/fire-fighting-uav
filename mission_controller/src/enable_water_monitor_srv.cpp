@@ -27,12 +27,12 @@ EnableWaterMonitorAction::EnableWaterMonitorAction(ros::NodeHandle& handle, cons
 BT::RosServiceNode<uav_msgs::EnableWaterMonitor>(handle, name, conf){}
 
 BT::PortsList EnableWaterMonitorAction::providedPorts() {
-  return {BT::InputPort<uint8_t>("Service Input for Pump Status")};  
+  return {BT::InputPort<uint8_t>("type_of_action")};  
 }
 
   void EnableWaterMonitorAction::sendRequest(RequestType& request)
   {
-    getInput("Service Input for Pump Status", request.status);
+    getInput("type_of_action", request.status);
 
     expected_result_ = true;
     ROS_INFO("Sending request to Water Monitor");

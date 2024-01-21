@@ -39,7 +39,7 @@
  CheckWaterStatus:: CheckWaterStatus(const std::string & instance_name, const BT::NodeConfiguration & conf,
               ros::NodeHandle& nh)
   : BT::ConditionNode(instance_name, conf), nh_ (nh) {
-    water_status_sub_ = nh_.subscribe<uav_msgs::WaterStatus>("dft_node//dft_node_topic", 10,
+    water_status_sub_ = nh_.subscribe<uav_msgs::WaterStatus>("water_monitor_node/water_status_topic", 10,
                                                                             &CheckWaterStatus::WaterStatusCallback_, this);
     }
 
@@ -50,30 +50,35 @@
 */
 BT::NodeStatus CheckWaterStatus::tick() {
   getInput<int>("required_status", required_status_);
+  ros::spinOnce();
+  ROS_INFO("CheckWaterStatus: Current Status: %d, Required Status: %d", current_status_, required_status_);
+
   status_mtx_.lock(); //it is good practise to use mutexes when accessing variable which can be modified from different threads
-  //as callbacks can be threads, I uses mutexes here to make this code robust
-  if (current_status_ == uav_msgs::WaterStatus::WaterOK) {
+  // as callbacks can be threads, I uses mutexes here to make this code robust
+  if (current_status_ != required_status_) {
     status_mtx_.unlock();
-    ROS_INFO("CheckWaterStatus: RUNNING Water Status OK");
+    ROS_INFO("CheckWaterStatus: RUNNING");
     return BT::NodeStatus::RUNNING;
   }
   if (current_status_ == required_status_) {
     status_mtx_.unlock();
     ROS_INFO("CheckWaterStatus: SUCCESS");
     return BT::NodeStatus::SUCCESS;
-  } else {
+  } 
+  // else {
+  //   status_mtx_.unlock();
+  //   ROS_INFO("CheckWaterStatus: FAILURE current status is not required status");
+  //   return BT::NodeStatus::FAILURE;
+  // }
     status_mtx_.unlock();
-    ROS_INFO("CheckWaterStatus: FAILURE current status is not required status");
-    return BT::NodeStatus::FAILURE;
-  }
 }
 
 /**
  * Standard topic callback
 */
-void CheckWaterStatus::WaterStatusCallback_(const uav_msgs::WaterStatus::ConstPtr& message) {
+void CheckWaterStatus::WaterStatusCallback_(const uav_msgs::WaterStatus::ConstPtr& msg ) {
   status_mtx_.lock();
-  current_status_ = message->status;
+  current_status_ = msg->status;
   status_mtx_.unlock();
 }
 

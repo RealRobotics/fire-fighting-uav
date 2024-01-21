@@ -52,6 +52,7 @@ BT::NodeStatus IsBatteryRequiredStatus::tick() {
   getInput<int>("required_status", required_status_);
   status_mtx_.lock(); //it is good practise to use mutexes when accessing variable which can be modified from different threads
   //as callbacks can be threads, I uses mutexes here to make this code robust
+  ROS_INFO("IsBatteryRequiredStatus: Current Status: %d, Required Status: %d", current_status_, required_status_);
   if (current_status_ == uav_msgs::BatteryStatus::UNSET) {
     status_mtx_.unlock();
     ROS_INFO("IsBatteryRequiredStatus: RUNNING due battery unset");
