@@ -39,7 +39,7 @@
  CheckGimbalStatus:: CheckGimbalStatus(const std::string & instance_name, const BT::NodeConfiguration & conf,
               ros::NodeHandle& nh)
   : BT::ConditionNode(instance_name, conf), nh_ (nh) {
-    gimbal_status_sub_ = nh_.subscribe<uav_msgs::GimbalStatus>("dft_node//dft_node_topic", 10,
+    gimbal_status_sub_ = nh_.subscribe<uav_msgs::GimbalStatus>("/spa_gimbal_status_topic", 10,
                                                                             &CheckGimbalStatus::GimbalStatusCallback_, this);
     }
 
@@ -52,18 +52,23 @@ BT::NodeStatus CheckGimbalStatus::tick() {
   getInput<int>("required_status", required_status_);
   status_mtx_.lock(); //it is good practise to use mutexes when accessing variable which can be modified from different threads
   //as callbacks can be threads, I uses mutexes here to make this code robust
-  if (current_status_ == uav_msgs::GimbalStatus::IDLE) {
+   
+  if (!callback_triggered_) {
     status_mtx_.unlock();
-    ROS_INFO("CheckGimbalStatus: RUNNING IDLE");
+    ROS_INFO("CheckGimbalStatus: RUNNING Waiting for Callback");
+     ros::spinOnce();
     return BT::NodeStatus::RUNNING;
   }
+  ROS_INFO("CheckGimbalStatus: Current Status: %d, Required Status: %d", current_status_, required_status_);
   if (current_status_ == required_status_) {
     status_mtx_.unlock();
     ROS_INFO("CheckGimbalStatus: required status and current status is same SUCCESS");
+    callback_triggered_ = false;
     return BT::NodeStatus::SUCCESS;
   } else {
     status_mtx_.unlock();
     ROS_INFO("CheckGimbalStatus: FAILURE current status is not required status");
+    callback_triggered_ = false;
     return BT::NodeStatus::FAILURE;
   }
 }
@@ -74,6 +79,7 @@ BT::NodeStatus CheckGimbalStatus::tick() {
 void CheckGimbalStatus::GimbalStatusCallback_(const uav_msgs::GimbalStatus::ConstPtr& message) {
   status_mtx_.lock();
   current_status_ = message->status;
+  callback_triggered_ = true;
   status_mtx_.unlock();
 }
 

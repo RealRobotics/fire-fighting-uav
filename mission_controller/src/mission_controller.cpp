@@ -116,7 +116,7 @@ void MissionController::createTree_(std::string tree_file, std::string waypoints
   loadgimbalstatus_();
   loadvisualstatus_();
   loadwaterstatus_();
-  loadwatermonitorcmds_();
+  loadPumpWaterMonitorcmds_();
 }
 
 /**
@@ -215,9 +215,9 @@ void MissionController::loadwaterstatus_()
 }
 
 /**
- * The constants for water monitor cmd are loaded here. The reasoning is same as in the above method.
+ * The constants for goal action server and service water monitor cmd are loaded here. The reasoning is same as in the above method.
 */
-void MissionController::loadwatermonitorcmds_()
+void MissionController::loadPumpWaterMonitorcmds_()
 {
   blackboard_->set("pump_on", uint8_t(uav_msgs::PumpStatus::ON));
   blackboard_->set("pump_off", uint8_t(uav_msgs::PumpStatus::OFF));

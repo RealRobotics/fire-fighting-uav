@@ -50,26 +50,35 @@
 */
 BT::NodeStatus CheckWaterStatus::tick() {
   getInput<int>("required_status", required_status_);
-  ros::spinOnce();
-  ROS_INFO("CheckWaterStatus: Current Status: %d, Required Status: %d", current_status_, required_status_);
+  // ROS_INFO("CheckWaterStatus: Current Status: %d, Required Status: %d", current_status_, required_status_);
+  // while (!callback_triggered_) {
+  // // Sleep for a short duration to avoid busy-waiting
+  // std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  // ros::spinOnce();
+  // }
+  if (!callback_triggered_) {
+    status_mtx_.unlock();
+    ROS_INFO("CheckWaterStatus: RUNNING Waiting for Callback");
+     ros::spinOnce();
+    return BT::NodeStatus::RUNNING;
+  }
 
   status_mtx_.lock(); //it is good practise to use mutexes when accessing variable which can be modified from different threads
   // as callbacks can be threads, I uses mutexes here to make this code robust
-  if (current_status_ != required_status_) {
-    status_mtx_.unlock();
-    ROS_INFO("CheckWaterStatus: RUNNING");
-    return BT::NodeStatus::RUNNING;
-  }
+
   if (current_status_ == required_status_) {
     status_mtx_.unlock();
     ROS_INFO("CheckWaterStatus: SUCCESS");
+    callback_triggered_=false;
     return BT::NodeStatus::SUCCESS;
   } 
-  // else {
-  //   status_mtx_.unlock();
-  //   ROS_INFO("CheckWaterStatus: FAILURE current status is not required status");
-  //   return BT::NodeStatus::FAILURE;
-  // }
+  else {
+    status_mtx_.unlock();
+    ROS_INFO("CheckWaterStatus: FAILURE current status is not required status");
+    callback_triggered_=false;
+    return BT::NodeStatus::FAILURE;
+
+  }
     status_mtx_.unlock();
 }
 
@@ -79,7 +88,9 @@ BT::NodeStatus CheckWaterStatus::tick() {
 void CheckWaterStatus::WaterStatusCallback_(const uav_msgs::WaterStatus::ConstPtr& msg ) {
   status_mtx_.lock();
   current_status_ = msg->status;
+  callback_triggered_=true;
   status_mtx_.unlock();
+
 }
 
 /** 

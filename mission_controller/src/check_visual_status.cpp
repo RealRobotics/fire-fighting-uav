@@ -52,18 +52,21 @@ BT::NodeStatus CheckVisualStatus::tick() {
   getInput<int>("required_status", required_status_);
   status_mtx_.lock(); //it is good practise to use mutexes when accessing variable which can be modified from different threads
   //as callbacks can be threads, I uses mutexes here to make this code robust
-  if (current_status_ == uav_msgs::VisualNavigation::OFFLINE) {
+  if (!callback_triggered_) {
     status_mtx_.unlock();
-    ROS_INFO("CheckVisualNavigationStatus: RUNNING OFFLINE");
+    ROS_INFO("CheckVisualNavigationStatus: RUNNING Waiting for Callback");
+     ros::spinOnce();
     return BT::NodeStatus::RUNNING;
   }
   if (current_status_ == required_status_) {
     status_mtx_.unlock();
     ROS_INFO("CheckVisualNavigationStatus: SUCCESS");
+    callback_triggered_=false;
     return BT::NodeStatus::SUCCESS;
   } else {
     status_mtx_.unlock();
     ROS_INFO("CheckVisualNavigationStatus: FAILURE current status is not required status");
+    callback_triggered_=true;
     return BT::NodeStatus::FAILURE;
   }
 }
@@ -74,6 +77,7 @@ BT::NodeStatus CheckVisualStatus::tick() {
 void CheckVisualStatus::VisualStatusCallback_(const uav_msgs::VisualNavigation::ConstPtr& message) {
   status_mtx_.lock();
   current_status_ = message->status;
+  callback_triggered_=true;
   status_mtx_.unlock();
 }
 

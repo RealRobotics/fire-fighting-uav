@@ -45,7 +45,7 @@ private:
   void loadgimbalstatus_();
   void loadwaterstatus_();
   void loadvisualstatus_();
-  void loadwatermonitorcmds_();
+  void loadPumpWaterMonitorcmds_();
   bool enableMission_(uav_msgs::EnableMission::Request  &req,
     uav_msgs::EnableMission::Response &res);
   bool disableMission_(uav_msgs::DisableMission::Request  &req,

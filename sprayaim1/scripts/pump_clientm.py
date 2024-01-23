@@ -52,6 +52,8 @@ def pump_control(start_pump):
     # Check the result to determine if the pump is running or stopped
     if result.running:
         rospy.loginfo("Pump Action Completed: Pump is Running")
+        result=True
     else:
         rospy.loginfo("Pump Action Completed: Pump is Stopped")
+        result=True
     return result

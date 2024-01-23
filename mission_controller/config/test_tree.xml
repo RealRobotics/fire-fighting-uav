@@ -1,0 +1,14 @@
+<root>
+    <BehaviorTree>
+        <Sequence>
+            <Sequence>
+                <!-- <CheckFireStatus required_status="{no_fire}"/> -->
+                <!-- <CheckWaterStatus required_status="{water_ok}"/> -->
+                <!-- <SprayBTAction server_name="spray_planner" type_of_action="{pump_off}"/> -->
+                <!-- <EnableWaterMonitor service_name="EnableWaterMonitor" type_of_action="{pump_off}"/> -->
+                <CheckGimbalStatus required_status="{idle}"/>
+            </Sequence>
+        </Sequence>
+    </BehaviorTree>
+</root>
+

@@ -49,6 +49,7 @@ private:
   std::mutex status_mtx_;
   uint8_t current_status_ {uav_msgs::FireTarget::NO_FIRE};
   int required_status_ {uav_msgs::FireTarget::NO_FIRE};
+  bool callback_triggered_ = false;
 
 };
 

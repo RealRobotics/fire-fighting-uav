@@ -49,6 +49,7 @@ private:
   std::mutex status_mtx_;
   uint8_t current_status_ {uav_msgs::WaterStatus::WaterOK};
   int required_status_ {uav_msgs::WaterStatus::WaterOK};
+  bool callback_triggered_ = false;
 
 };
 
