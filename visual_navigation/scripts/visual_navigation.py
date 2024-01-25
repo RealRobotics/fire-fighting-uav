@@ -24,16 +24,16 @@ class VisualNavigationNode:
         self.scan_distance = 6.0
 
 
-        rospy.init_node('visual_navigation', anonymous=False)
+        rospy.init_node('visual_navigation_node', anonymous=False)
 
         # Subscribe to the "fire_target" topic with the custom message type
-        rospy.Subscriber('fire_target', FireTarget, self.fire_target_callback)
+        rospy.Subscriber('dft_node_topic', FireTarget, self.fire_target_callback)
 
         # Subscribe to the "WallMetrics" topic with the custom message type
-        rospy.Subscriber('WallMetrics', WallMetrics, self.wall_metrics_callback)
+        rospy.Subscriber('wall_metrics_topic', WallMetrics, self.wall_metrics_callback)
 
         # Create a publisher for visual_status
-        self.visual_status_pub = rospy.Publisher('visual_status', VisualNavigation, queue_size=10)
+        self.visual_status_pub = rospy.Publisher('visual_status_topic', VisualNavigation, queue_size=10)
 
         # Create an action client for RelativePosition
         self.relative_position_client = actionlib.SimpleActionClient('relative_position_action', RelativePositionAction)
@@ -144,7 +144,8 @@ class VisualNavigationNode:
             # Convert the angle to degrees
             yaw_angle_degrees = math.degrees(yaw_angle)
 
-            rospy.loginfo("Wall_distance_right: {}".format(yaw_angle_degrees))
+            rospy.loginfo("Yaw Angle: {}".format(yaw_angle_degrees))
+
             return yaw_angle_degrees
 
         except ZeroDivisionError:
@@ -165,17 +166,6 @@ class VisualNavigationNode:
             return VisualNavigation.CENTRED
         else:
             return VisualNavigation.NOTCENTRED
-
-    def transform_coordinates_to_enu(self, x, y, depth):
-        # Assuming no rotation for simplicity, transform to ENU frame
-        enu_x = y
-        enu_y = -x
-        enu_depth = -depth
-
-        # Calculate yaw angle (assumed to be 0 for simplicity)
-        enu_yaw = 0.0
-
-        return enu_x, enu_y, enu_depth, enu_yaw
 
 if __name__ == '__main__':
     try:

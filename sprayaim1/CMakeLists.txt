@@ -59,6 +59,7 @@ find_package(catkin REQUIRED COMPONENTS
   iafiretarget.msg
   iapumpstatus.msg
   iawaterstatus.msg
+  WallMetrics.msg
  )
 
 ## Generate services in the 'srv' folder
