@@ -23,11 +23,13 @@
           </RepeatOverVectorUntilFailure>
           <Sequence>
             <Fallback>
-              <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
+              <IsBatteryRequiredStatus required_status="{battery_safety_critical}"/>
+              <!-- <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/> -->
               <IsBatteryRequiredStatus required_status="{battery_ok}"/>
             </Fallback>
             <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-            <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{go_home}"/>
+            <!-- <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{go_home}"/> -->
+            <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{land}"/>
           </Sequence>
           <Sequence>
             <IsMissionEnabled mission_enabled="{mission_enabled}"/>
