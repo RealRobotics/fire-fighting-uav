@@ -30,6 +30,7 @@ set(MSG_FILES
   iafiretarget.msg
   iapumpstatus.msg
   iawaterstatus.msg
+  ServiceInstrumentation.msg
 
 )
 
