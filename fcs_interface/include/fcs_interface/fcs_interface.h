@@ -101,8 +101,8 @@ private:
 
   ros::Subscriber flight_status_subscriber_;  // added for relative postion 
   ros::Subscriber display_mode_subscriber_;   // added for relative postion
-  ros::Subscriber local_position_subscriber;  // added for relative postion
-  ros::Subscriber gps_health__subscriber_;    // added for relative postion   
+  ros::Subscriber local_position_subscriber_;  // added for relative postion
+  ros::Subscriber gps_health_subscriber_;    // added for relative postion   
   ros::Subscriber height_above_takeoff_subscriber_;   // added for relative postion
 
   ros::Publisher battery_state_publisher_; 

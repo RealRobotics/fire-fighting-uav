@@ -36,7 +36,7 @@ class VisualNavigationNode:
         self.visual_status_pub = rospy.Publisher('visual_status_topic', VisualNavigation, queue_size=10)
 
         # Create an action client for RelativePosition
-        self.relative_position_client = actionlib.SimpleActionClient('relative_position_action', RelativePositionAction)
+        self.relative_position_client = actionlib.SimpleActionClient('/fcs_interface/relative_position', RelativePositionAction)
         self.relative_position_client.wait_for_server()
 
         rospy.spin()
@@ -71,9 +71,11 @@ class VisualNavigationNode:
         if self.prev_fire_status == FireTarget.DETECTED and fire_status == FireTarget.NO_FIRE:
             # If previously detected and now no fire, move to the scan distance
             self.send_relative_position_goal(visual_msg.visual_x-self.scan_distance , visual_msg.visual_y, visual_msg.visual_z, visual_msg.visual_yaw )
+            rospy.loginfo(" From  Detected to No Fire Status and Send Goal to FCS")
         elif self.prev_fire_status == FireTarget.NO_FIRE and fire_status == FireTarget.DETECTED:
             # Move 4 meters from the wall
                 self.send_relative_position_goal(visual_msg.visual_x-self.tracked_distance , visual_msg.visual_y, visual_msg.visual_z, visual_msg.visual_yaw )
+                rospy.loginfo(" From No Fire to Detected Status")
         elif self.prev_fire_status == FireTarget.TRACKED and fire_status == FireTarget.NO_FIRE:
             # Check the distance from the wall if fire is detected
             rospy.loginfo(" From Tracked to No Fire Status")
@@ -124,10 +126,10 @@ class VisualNavigationNode:
 
         # Print the received information
         rospy.loginfo("Received WallMetrics message:")
-        rospy.loginfo("Header: {}".format(header))
-        rospy.loginfo("Wall_distance_left: {}".format(self.wall_distance_left))
-        rospy.loginfo("Wall_distance_center: {}".format(self.wall_distance_center))
-        rospy.loginfo("Wall_distance_right: {}".format(self.wall_distance_right))
+        # rospy.loginfo("Header: {}".format(header))
+        # rospy.loginfo("Wall_distance_left: {}".format(self.wall_distance_left))
+        # rospy.loginfo("Wall_distance_center: {}".format(self.wall_distance_center))
+        # rospy.loginfo("Wall_distance_right: {}".format(self.wall_distance_right))
 
     def calculate_yaw_angle(self, left_distance, wall_distance_center, right_distance):
         try:

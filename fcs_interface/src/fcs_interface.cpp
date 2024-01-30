@@ -44,19 +44,22 @@ bool FCS_Interface::start() {
   drone_task_client_ = node_handle_.serviceClient<dji_sdk::DroneTaskControl>("dji_sdk/drone_task_control");
   waypoint_action_client_ = node_handle_.serviceClient<dji_sdk::MissionWpAction>("dji_sdk/mission_waypoint_action");
   waypoint_upload_client_ = node_handle_.serviceClient<dji_sdk::MissionWpUpload>("dji_sdk/mission_waypoint_upload");
-
+  set_local_pos_reference    = node_handle_.serviceClient<dji_sdk::SetLocalPosRef> ("dji_sdk/set_local_pos_ref");
   // Subscribe to DJI OSDK topics
   gps_position_subscriber_ = node_handle_.subscribe<sensor_msgs::NavSatFix>("dji_sdk/gps_position", 10,
                                                                             &FCS_Interface::gpsPositionCallback_, this);
   battery_state_subscriber_ = node_handle_.subscribe<sensor_msgs::BatteryState>("dji_sdk/battery_state", 10,
                                                                             &FCS_Interface::batteryStateCallback_, this);
 
+  local_position_subscriber_ = node_handle_.subscribe("dji_sdk/local_position", 10, &FCS_Interface::relative_position_Callback_, this);
+  gps_health_subscriber_      = node_handle_.subscribe("dji_sdk/gps_health", 10, &FCS_Interface::gps_health_Callback_,this);
+  altitude_subscriber_ = node_handle_.subscribe<std_msgs::Float32>("dji_sdk/height_above_takeoff", 10,
+                                                                            &FCS_Interface::altitudeCallback_, this);
+
   //set up publishing topics
   battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
-  
-  altitude_subscriber_ = node_handle_.subscribe<std_msgs::Float32>("dji_sdk/height_above_takeoff", 10,
-                                                                            &FCS_Interface::altitudeCallback_, this);
+  ctrlPosYawPub = node_handle_.advertise<sensor_msgs::Joy>("dji_sdk/flight_control_setpoint_ENUposition_yaw", 10);
 
   //start the action servers
   fly_server_.start();
@@ -377,8 +380,6 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   position_mutex_.unlock();
   // waypointTask.mission_waypoint.push_back(waypoint);
 
-
-
     convertToWaypoint_(nav_sat_fix, waypoint);
     waypointTask.mission_waypoint.push_back(waypoint);
 
@@ -551,12 +552,14 @@ void FCS_Interface::setTarget_relative_position_(const uav_msgs::RelativePositio
       else 
       {
           ROS_INFO("Local Reference not Set");
+          relative_position_server_.setAborted();
       }
     }
     else
     {
       ROS_INFO("Cannot execute Local Position Control");
       ROS_INFO("Not enough GPS Satellites");
+      relative_position_server_.setAborted();
     }
 }
 
@@ -590,6 +593,7 @@ void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &
       ROS_INFO("Cannot execute Relative Position Control");
       ROS_INFO("Not enough GPS Satellites");
       relative_position_result_.at_target = false;
+
        break;  // exit the loop if GPS health is not sufficient
     }
 
@@ -604,13 +608,20 @@ void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &
     ros::spinOnce();
   }
 
-  relative_position_result_.at_target = at_target;
+  if(relative_position_result_.at_target = at_target)
+  {
   relative_position_server_.setSucceeded(relative_position_result_);
+  }
+  else
+  {
+    relative_position_server_.setAborted(relative_position_result_);
+  }
 }
 
 
 void FCS_Interface::gps_health_Callback_(const std_msgs::UInt8::ConstPtr& msg) {
   current_gps_health = msg->data;
+  // ROS_INFO("Current GPS Health: %d", static_cast<int>(current_gps_health));
 }
 
 void FCS_Interface::flight_status_Callback_(const std_msgs::UInt8::ConstPtr& msg)
