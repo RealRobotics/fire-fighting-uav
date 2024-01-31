@@ -113,6 +113,7 @@ private:
 
   bool loaded_ {false};
   bool referenceSet_ = false;
+  bool at_target_result = false;
   sensor_msgs::NavSatFix gps_position_;
   double altitude_ {0.0};
   float target_offset_x{0.0};

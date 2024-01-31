@@ -530,7 +530,7 @@ void FCS_Interface::setTarget_relative_position_(const uav_msgs::RelativePositio
 
     tf::Matrix3x3 m(q);
 
-    double roll, pitch, initial_yaw,yawC=0;
+    double roll, pitch, initial_yaw,yawC;
     m.getRPY(roll, pitch, initial_yaw);
 
     if (current_gps_health > 3) 
@@ -561,6 +561,16 @@ void FCS_Interface::setTarget_relative_position_(const uav_msgs::RelativePositio
       ROS_INFO("Not enough GPS Satellites");
       relative_position_server_.setAborted();
     }
+  relative_position_result_.at_target = at_target_result;
+
+  if(relative_position_result_.at_target)
+  {
+    relative_position_server_.setSucceeded(relative_position_result_);
+  }
+  else
+  {
+    relative_position_server_.setAborted(relative_position_result_);
+  }
 }
 
 /*!
@@ -571,9 +581,9 @@ void FCS_Interface::setTarget_relative_position_(const uav_msgs::RelativePositio
 void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &zCmd, double &yawCmd)
 {
   const float pos_threshold = 0.1;
-  bool at_target = false;
+  at_target_result=false;
 
-  while (!at_target && ros::ok())
+  while (!at_target_result && ros::ok())
   {
     if (current_gps_health > 3)
     {
@@ -592,8 +602,7 @@ void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &
     {
       ROS_INFO("Cannot execute Relative Position Control");
       ROS_INFO("Not enough GPS Satellites");
-      relative_position_result_.at_target = false;
-
+      at_target_result = false;
        break;  // exit the loop if GPS health is not sufficient
     }
 
@@ -602,19 +611,10 @@ void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &
     bool ck3 = (relative_position.point.z < (target_offset_z - pos_threshold));
     bool ck4 = (relative_position.point.z > (target_offset_z + pos_threshold));
 
-    at_target = !(ck1 || ck2 || ck3 || ck4);
+    at_target_result = !(ck1 || ck2 || ck3 || ck4);
    
     ros::Duration(0.02).sleep();
     ros::spinOnce();
-  }
-
-  if(relative_position_result_.at_target = at_target)
-  {
-  relative_position_server_.setSucceeded(relative_position_result_);
-  }
-  else
-  {
-    relative_position_server_.setAborted(relative_position_result_);
   }
 }
 

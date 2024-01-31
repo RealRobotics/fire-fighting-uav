@@ -3,7 +3,7 @@
 import rospy
 import math
 import actionlib
-from uav_msgs.msg import FireTarget, WallMetrics, VisualNavigation, RelativePositionAction, RelativePositionGoal
+from uav_msgs.msg import FireTarget, WallMetrics, VisualNavigation, RelativePositionAction, RelativePositionGoal,RelativePositionResult
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from geometry_msgs.msg import Quaternion
 from std_msgs.msg import Header
@@ -23,6 +23,8 @@ class VisualNavigationNode:
         # Initialize scan_distance (6 meters)
         self.scan_distance = 6.0
 
+        self.centered = VisualNavigation.NOTCENTRED
+        self.at_target =False
 
         rospy.init_node('visual_navigation_node', anonymous=False)
 
@@ -74,17 +76,21 @@ class VisualNavigationNode:
             rospy.loginfo(" From  Detected to No Fire Status and Send Goal to FCS")
         elif self.prev_fire_status == FireTarget.NO_FIRE and fire_status == FireTarget.DETECTED:
             # Move 4 meters from the wall
-                self.send_relative_position_goal(visual_msg.visual_x-self.tracked_distance , visual_msg.visual_y, visual_msg.visual_z, visual_msg.visual_yaw )
-                rospy.loginfo(" From No Fire to Detected Status")
+            self.send_relative_position_goal(visual_msg.visual_x-self.tracked_distance , visual_msg.visual_y, visual_msg.visual_z, visual_msg.visual_yaw )
+            rospy.loginfo(" From No Fire to Detected Status")
         elif self.prev_fire_status == FireTarget.TRACKED and fire_status == FireTarget.NO_FIRE:
             # Check the distance from the wall if fire is detected
             rospy.loginfo(" From Tracked to No Fire Status")
-        
+        elif self.prev_fire_status == FireTarget.DETECTED and fire_status == FireTarget.DETECTED and self.centered ==VisualNavigation.NOTCENTRED and self.at_target ==True:
+            self.send_relative_position_goal(visual_msg.visual_x-self.tracked_distance , visual_msg.visual_y, visual_msg.visual_z, visual_msg.visual_yaw )
+            self.at_target =False
+            rospy.loginfo(" Not Centered Send the Goal Again")
        # Update the previous fire status
         self.prev_fire_status = fire_status
 
     def send_relative_position_goal(self, x, y, z, yaw):
         # Create a RelativePositionGoal with the ENU coordinates
+
         goal = RelativePositionGoal()
 
         # Assuming there is a Header field in RelativePositionGoal
@@ -101,12 +107,16 @@ class VisualNavigationNode:
         rospy.loginfo("Sending Relative Position Goal: xv={}, yv={}, zv={}, yawv={}".format(
         goal.goal.xv_relative, goal.goal.yv_relative, goal.goal.zv_relative, goal.goal.yawv_relative))
 
-    def relative_position_goal_done_callback(self, state, result):
-        # This callback is called when the goal is completed
-        if state == actionlib.GoalStatus.SUCCEEDED:
+    def relative_position_goal_done_callback(self, status, result):
+         # This callback is called when the goal is completed
+        if status == actionlib.GoalStatus.SUCCEEDED:
             rospy.loginfo("RelativePosition goal succeeded! Drone is at the target.")
+        # Accessing specific fields from the result
+            self.at_target = result.at_target
+            rospy.loginfo("Result: at_target={}".format(self.at_target))  # Corrected from self.result
         else:
-            rospy.logwarn("RelativePosition goal did not succeed. State: {}".format(state))
+            rospy.logwarn("RelativePosition goal did not succeed. State: {}".format(status))
+
 
     def wall_metrics_callback(self, msg):
         # Process the received custom message from "WallMetrics" topic
@@ -120,12 +130,12 @@ class VisualNavigationNode:
         # Calculate the yaw angle from WallMetrics
         try:
             yaw_angle = self.calculate_yaw_angle(self.wall_distance_left,self.wall_distance_center ,self.wall_distance_right)
-            rospy.loginfo("Calculated Yaw Angle: {}".format(yaw_angle))
+            # rospy.loginfo("Calculated Yaw Angle: {}".format(yaw_angle))
         except Exception as e:
             rospy.logerr("Error calculating yaw angle or visual status: {}".format(str(e)))
 
         # Print the received information
-        rospy.loginfo("Received WallMetrics message:")
+        # rospy.loginfo("Received WallMetrics message:")
         # rospy.loginfo("Header: {}".format(header))
         # rospy.loginfo("Wall_distance_left: {}".format(self.wall_distance_left))
         # rospy.loginfo("Wall_distance_center: {}".format(self.wall_distance_center))
@@ -146,7 +156,7 @@ class VisualNavigationNode:
             # Convert the angle to degrees
             yaw_angle_degrees = math.degrees(yaw_angle)
 
-            rospy.loginfo("Yaw Angle: {}".format(yaw_angle_degrees))
+            # rospy.loginfo("Yaw Angle: {}".format(yaw_angle_degrees))
 
             return yaw_angle_degrees
 
@@ -156,17 +166,21 @@ class VisualNavigationNode:
 
     def calculate_visual_status(self, x, y, z, left_distance,centre_distance ,right_distance):
         # Set thresholds for considering the drone as centered or not
-        centering_threshold_xy = 0.01
-        centering_threshold_z = 0.01
-        wall_alignment_threshold = 0.01
+        centering_threshold_xy = 0.1
+        centering_threshold_z = 0.1
+        wall_alignment_threshold = 0.1
 
         # Check if the drone is centered in x-y and close to the wall
         if (abs(x) < centering_threshold_xy and
                 abs(y) < centering_threshold_xy and
                 abs(z) < centering_threshold_z and
                 abs(left_distance - right_distance) < wall_alignment_threshold):
+            rospy.loginfo("Centered")
+            self.centered = VisualNavigation.CENTRED
             return VisualNavigation.CENTRED
         else:
+            rospy.loginfo("Not Centered")
+            self.centered = VisualNavigation.NOTCENTRED
             return VisualNavigation.NOTCENTRED
 
 if __name__ == '__main__':
