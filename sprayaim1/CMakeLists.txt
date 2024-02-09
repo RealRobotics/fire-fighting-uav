@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
   genmsg
   actionlib_msgs
+  uav_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -53,13 +54,13 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
  add_message_files(
   FILES
-  FireTarget.msg
-  PumpStatus.msg
-  WaterStatus.msg
-  iafiretarget.msg
-  iapumpstatus.msg
-  iawaterstatus.msg
-  WallMetrics.msg
+  # FireTarget.msg
+  # PumpStatus.msg
+  # WaterStatus.msg
+  # iafiretarget.msg
+  # iapumpstatus.msg
+  # iawaterstatus.msg
+  # WallMetrics.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -118,7 +119,7 @@ generate_dynamic_reconfigure_options(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS 
   LIBRARIES sprayaim1
   CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
