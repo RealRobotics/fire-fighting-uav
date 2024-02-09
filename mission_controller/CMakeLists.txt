@@ -128,9 +128,9 @@ include_directories(
 #   src/${PROJECT_NAME}/mission_controller.cpp
 # )
 
-# FIND_LIBRARY(man_LIBRARIES jsoncpp /usr/include/jsoncpp) #previously added by Lenka man_LIBRARIES
+FIND_LIBRARY(man_LIBRARIES jsoncpp /usr/include/jsoncpp) #previously added by Lenka man_LIBRARIES
 
-FIND_LIBRARY(jsoncpp /usr/include/jsoncpp)
+# FIND_LIBRARY(jsoncpp /usr/include/jsoncpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
