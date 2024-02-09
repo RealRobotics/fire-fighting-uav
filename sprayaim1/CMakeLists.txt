@@ -121,7 +121,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS 
   LIBRARIES sprayaim1
-  CATKIN_DEPENDS roscpp rospy std_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs uav_msgs
 #  DEPENDS system_lib
   message_runtime
   actionlib_msgs
