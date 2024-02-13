@@ -2,7 +2,7 @@
 
 import rospy
 from std_msgs.msg import UInt8
-from uav_msgs.msg import PumpStatus, WaterStatus,ServiceInstrumentation
+from uav_msgs.msg import PumpStatus, WaterStatus
 from uav_msgs.srv import EnableWaterMonitor, EnableWaterMonitorResponse
 from std_msgs.msg import Time
 
@@ -36,8 +36,10 @@ class WaterMonitor:
         # service_status.status = ServiceInstrumentation.serviceXRequest
         # self.pub_service_instrumentation(service_status)
         current_time = rospy.Time.now()
-        rospy.loginfo(f'Publishing current time for request: {current_time}')
-        self.pub_service_water_monitor_request(current_time)
+        # rospy.loginfo(f'Publishing current time for request: {current_time}')
+        rospy.loginfo('Publishing current time for request: {}'.format(current_time))
+        # self.pub_service_water_monitor_request(current_time)
+        self.pub_service_water_monitor_request.publish(current_time)
 
         previous_pump_status = self.pump_status  # Save previous pump status
         self.pump_status = req.status
@@ -58,16 +60,20 @@ class WaterMonitor:
                 rospy.loginfo('Pump is OFF from ON.')
             else:
                 current_time = rospy.Time.now()
-                rospy.loginfo(f'Publishing current time for respond: {current_time}')
-                self.pub_service_water_monitor_respond(current_time)
+                # rospy.loginfo(f'Publishing current time for respond: {current_time}')
+                rospy.loginfo('Publishing current time for request: {}'.format(current_time))
+                # self.pub_service_water_monitor_respond(current_time)
+                self.pub_service_water_monitor_respond.publish(current_time)
                 return EnableWaterMonitorResponse(False)  # Unknown pump status, return failure
 
         elif self.pump_status == PumpStatus.OFF and self.counter_value == self.intial_counter:
             rospy.loginfo('Pump OFF send by client and Water is full.')
 
         current_time = rospy.Time.now()
-        rospy.loginfo(f'Publishing current time for respond: {current_time}')
-        self.pub_service_water_monitor_respond(current_time)
+        # rospy.loginfo(f'Publishing current time for respond: {current_time}')
+        rospy.loginfo('Publishing current time for respond {}'.format(current_time))
+        # self.pub_service_water_monitor_respond(current_time)
+        self.pub_service_water_monitor_respond.publish(current_time)
         return EnableWaterMonitorResponse(True)  # Successful response
 
     
