@@ -13,33 +13,26 @@
           <IsMissionEnabled mission_enabled="{mission_enabled}"/>
           <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{take_off}"/>
         </Sequence>
-        <Fallback>
-          <RepeatOverVectorUntilFailure vector="{waypoint_list}" next_waypoint="{current_waypoint}">
+          <Fallback>
+            <RepeatOverVectorUntilFailure vector="{waypoint_list}" next_waypoint="{current_waypoint}">
+              <Sequence>
+                <IsBatteryRequiredStatus required_status="{battery_ok}"/>
+                <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+                <FlyToWpBTAction server_name="/fcs_interface/fly_to_wp" waypoint="{current_waypoint}"/>
+              </Sequence>
+            </RepeatOverVectorUntilFailure>
+           </Fallback>
+           <Fallback>
             <Sequence>
-              <IsBatteryRequiredStatus required_status="{battery_ok}"/>
-              <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-              <FlyToWpBTAction server_name="/fcs_interface/fly_to_wp" waypoint="{current_waypoint}"/>
-            </Sequence>
-          </RepeatOverVectorUntilFailure>
-          <Sequence>
-            <Fallback>
-               <KeepRunningUntilFailure>
-                  <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
-               </KeepRunningUntilFailure>
-              <!-- <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/> -->
-              <!-- <IsBatteryRequiredStatus required_status="{battery_ok}"/> -->
-            </Fallback>
-            <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-            <IsBatteryRequiredStatus required_status="{battery_safety_critical}"/>
-            <!-- <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{go_home}"/> -->
+              <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{go_home}"/>
+              <KeepRunningUntilFailure>
+                <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
+              </KeepRunningUntilFailure>
+             </Sequence>
+          </Fallback> 
+          <Fallback>
             <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{land}"/>
-          </Sequence>
-          <Sequence>
-            <IsMissionEnabled mission_enabled="{mission_enabled}"/>
-            <IsBatteryRequiredStatus required_status="{battery_safety_critical}"/>
-            <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{land}"/>
-          </Sequence>
-        </Fallback>  
+          </Fallback> 
       </Sequence>
      </BehaviorTree>
  </root>
