@@ -289,6 +289,8 @@ void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix
   waypoint.target_gimbal_pitch = 0;
   waypoint.turn_mode = 0;
   waypoint.has_action = 0;
+  waypoint.action_time_limit=100;
+
   ROS_INFO("Waypoint created at: %f \t%f \t%f\n ", waypoint.latitude, waypoint.longitude, waypoint.altitude);
 }
 
@@ -328,13 +330,12 @@ sensor_msgs::NavSatFix FCS_Interface::generate_d_point_(const sensor_msgs::NavSa
   double latitude_diff = (nav_sat_fix.latitude - gps_position_.latitude) / 2.0;
   double longitude_diff = (nav_sat_fix.longitude - gps_position_.longitude) / 2.0;
   altitude_mutex_.lock();
-  double altitude_diff = (nav_sat_fix.altitude - altitude_) / 2.0;
   altitude_mutex_.unlock();
   position_mutex_.unlock();
 
   adjusted_wp.latitude = nav_sat_fix.latitude - latitude_diff;
   adjusted_wp.longitude = nav_sat_fix.longitude - longitude_diff;
-  adjusted_wp.altitude = nav_sat_fix.altitude - altitude_diff;
+  adjusted_wp.altitude = nav_sat_fix.altitude;
 
   // Adjust latitude and longitude based on point_number
   double adjustment = 0.0;
@@ -353,17 +354,17 @@ sensor_msgs::NavSatFix FCS_Interface::generate_d_point_(const sensor_msgs::NavSa
 
 bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) {
   bool result = false;
-  // Waypoint Mission : Initialization
   dji_sdk::MissionWaypointTask waypointTask;
-  setWaypointInitDefaults_(waypointTask);
+  // Waypoint Mission : Initialization
+    setWaypointInitDefaults_(waypointTask);
 
   dji_sdk::MissionWaypoint waypoint;
-  position_mutex_.lock();
-  altitude_mutex_.lock();
-  gps_position_.altitude = altitude_;
-  altitude_mutex_.unlock();
-  // convertToWaypoint_(gps_position_, waypoint);
-  position_mutex_.unlock();
+  // position_mutex_.lock();
+  // altitude_mutex_.lock();
+  // gps_position_.altitude = altitude_;
+  // altitude_mutex_.unlock();
+  // // convertToWaypoint_(gps_position_, waypoint);
+  // position_mutex_.unlock();
   // waypointTask.mission_waypoint.push_back(waypoint);
 
 
