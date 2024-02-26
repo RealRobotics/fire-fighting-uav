@@ -14,6 +14,7 @@ class WaterMonitor:
         rospy.loginfo('Water Monitor Node Running')
         self.counter_value = initial_counter_value
         self.intial_counter=initial_counter_value
+        self.publisher_thread_started = False  # Flag to track whether the publisher thread has started
         self.pump_status = PumpStatus.OFF 
         self.pub_water_status = rospy.Publisher('water_monitor_node/water_status_topic', WaterStatus, queue_size=10)
         # self.pub_service_instrumentation = rospy.Publisher('water_monitor_node/service_instrumentation_topic', ServiceInstrumentation , queue_size=10)
@@ -28,52 +29,47 @@ class WaterMonitor:
         self.publisher_thread = threading.Thread(target=self.publisher_thread_function, name='water_status_threard')
         self.publisher_thread.daemon = True  # The thread will exit when the main program exits
         self.publisher_thread.start()
+        while not self.publisher_thread_started:
+         rospy.loginfo("Thread not started wait")
+         rospy.sleep(0.1)
+
 
     def handle_enable_water_monitor(self, req):
 
-        # service_status=ServiceInstrumentation()
-        # service_status.header.stamp = rospy.Time.now()
-        # service_status.status = ServiceInstrumentation.serviceXRequest
-        # self.pub_service_instrumentation(service_status)
-        current_time = rospy.Time.now()
-        # rospy.loginfo(f'Publishing current time for request: {current_time}')
-        rospy.loginfo('Publishing current time for request: {}'.format(current_time))
-        # self.pub_service_water_monitor_request(current_time)
-        self.pub_service_water_monitor_request.publish(current_time)
-
+        Inst=False # flag for service instrumentation
         previous_pump_status = self.pump_status  # Save previous pump status
         self.pump_status = req.status
 
         if self.pump_status != previous_pump_status:
             # Pump status changed
             rospy.loginfo("Pump status changed: Previous={}, New={}".format(previous_pump_status, self.pump_status))
+            rospy.loginfo('Pump is ON from OFF. Down counter started.')
+            current_time = rospy.Time.now()
+            rospy.loginfo('Publishing current time for request: {}'.format(current_time))
+            self.pub_service_water_monitor_request.publish(current_time)
+            Inst=True
 
             if self.pump_status == PumpStatus.ON:
                 if self.counter_value > 0:
                     # Start down counter
                     self.start_down_counter()
-                    rospy.loginfo('Pump is ON from OFF. Down counter started.')
                 else:
                     rospy.loginfo('Pump OFF to ON but water is empty.')
             elif self.pump_status == PumpStatus.OFF:
                 # Pump is turned off
                 rospy.loginfo('Pump is OFF from ON.')
             else:
-                current_time = rospy.Time.now()
-                # rospy.loginfo(f'Publishing current time for respond: {current_time}')
-                rospy.loginfo('Publishing current time for request: {}'.format(current_time))
-                # self.pub_service_water_monitor_respond(current_time)
-                self.pub_service_water_monitor_respond.publish(current_time)
                 return EnableWaterMonitorResponse(False)  # Unknown pump status, return failure
 
         elif self.pump_status == PumpStatus.OFF and self.counter_value == self.intial_counter:
             rospy.loginfo('Pump OFF send by client and Water is full.')
+        
+        if Inst == True:
+            current_time = rospy.Time.now()
+            rospy.loginfo('Publishing current time for respond {}'.format(current_time))
+            self.pub_service_water_monitor_respond.publish(current_time)
+            Inst =False
 
-        current_time = rospy.Time.now()
-        # rospy.loginfo(f'Publishing current time for respond: {current_time}')
-        rospy.loginfo('Publishing current time for respond {}'.format(current_time))
-        # self.pub_service_water_monitor_respond(current_time)
-        self.pub_service_water_monitor_respond.publish(current_time)
         return EnableWaterMonitorResponse(True)  # Successful response
 
     
@@ -102,6 +98,7 @@ class WaterMonitor:
         self.pub_water_status.publish(water_status)
     
     def publisher_thread_function(self):
+        self.publisher_thread_started = True  # Set the flag to indicate that the thread has started
         rate = rospy.Rate(1)  # 1 Hz
         while not rospy.is_shutdown():
             if self.counter_value > 0:
