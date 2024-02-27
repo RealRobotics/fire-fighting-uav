@@ -17,13 +17,11 @@ class WaterMonitor:
         self.publisher_thread_started = False  # Flag to track whether the publisher thread has started
         self.pump_status = PumpStatus.OFF 
         self.pub_water_status = rospy.Publisher('water_monitor_node/water_status_topic', WaterStatus, queue_size=10)
-        # self.pub_service_instrumentation = rospy.Publisher('water_monitor_node/service_instrumentation_topic', ServiceInstrumentation , queue_size=10)
-        
-        self.pub_service_water_monitor_request = rospy.Publisher('water_monitor_node/service_water_monitor_request_topic', Time , queue_size=10)
-        self.pub_service_water_monitor_respond = rospy.Publisher('water_monitor_node/service_water_moniter_respond_topic', Time , queue_size=10)
-
-        # rospy.Subscriber('pump_status_topic', PumpStatus, self.pump_status_callback)
-        service = rospy.Service('EnableWaterMonitor', EnableWaterMonitor, self.handle_enable_water_monitor)
+        # publisher will start publishinh as soon as it intilaized.
+        water_status = WaterStatus()
+        water_status.header.stamp = rospy.Time.now()
+        water_status.status = WaterStatus.WaterOK
+        self.publish_water_status(water_status)
         
         # Create a separate thread for the publisher 
         self.publisher_thread = threading.Thread(target=self.publisher_thread_function, name='water_status_threard')
@@ -32,7 +30,11 @@ class WaterMonitor:
         while not self.publisher_thread_started:
          rospy.loginfo("Thread not started wait")
          rospy.sleep(0.1)
-
+          
+        self.pub_service_water_monitor_request = rospy.Publisher('water_monitor_node/service_water_monitor_request_topic', Time , queue_size=10)
+        self.pub_service_water_monitor_respond = rospy.Publisher('water_monitor_node/service_water_moniter_respond_topic', Time , queue_size=10)
+        # service is initialized after the thread
+        service = rospy.Service('EnableWaterMonitor', EnableWaterMonitor, self.handle_enable_water_monitor)
 
     def handle_enable_water_monitor(self, req):
 
@@ -71,7 +73,6 @@ class WaterMonitor:
             Inst =False
 
         return EnableWaterMonitorResponse(True)  # Successful response
-
     
     def start_down_counter(self):
         # Start the down counter timer
