@@ -106,6 +106,7 @@ class WaterMonitor:
                 water_status = WaterStatus()
                 water_status.header.stamp = rospy.Time.now()
                 water_status.status = WaterStatus.WaterOK
+                rospy.loginfo('Publishing water status ok with timestamp: {}'.format(water_status.header.stamp))
                 self.publish_water_status(water_status)
             elif self.counter_value <= 0:
                 water_status = WaterStatus()
