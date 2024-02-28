@@ -19,7 +19,7 @@ class WaterMonitor:
         self.pub_water_status = rospy.Publisher('water_monitor_node/water_status_topic', WaterStatus, queue_size=10)
         
         while (not (self.pub_water_status.get_num_connections() > 0)):
-         rospy.loginfo('No connections')
+         rospy.loginfo('No connections') 
         
         # publisher will start publishinh as soon as it intilaized.
         water_status = WaterStatus()
