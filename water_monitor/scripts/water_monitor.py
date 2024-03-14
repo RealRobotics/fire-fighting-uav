@@ -17,6 +17,7 @@ class WaterMonitor:
         self.publisher_thread_started = False  # Flag to track whether the publisher thread has started
         self.pump_status = PumpStatus.OFF 
         self.pub_water_status = rospy.Publisher('water_monitor_node/water_status_topic', WaterStatus, queue_size=10)
+        rospy.sleep(0.5)
         # publisher will start publishinh as soon as it intilaized.
         water_status = WaterStatus()
         water_status.header.stamp = rospy.Time.now()
@@ -29,7 +30,7 @@ class WaterMonitor:
         self.publisher_thread.start()
         while not self.publisher_thread_started:
          rospy.loginfo("Thread not started wait")
-         rospy.sleep(0.1)
+         rospy.sleep(0.5)
           
         self.pub_service_water_monitor_request = rospy.Publisher('water_monitor_node/service_water_monitor_request_topic', Time , queue_size=10)
         self.pub_service_water_monitor_respond = rospy.Publisher('water_monitor_node/service_water_moniter_respond_topic', Time , queue_size=10)
