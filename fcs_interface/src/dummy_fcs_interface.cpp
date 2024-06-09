@@ -1,6 +1,7 @@
 #include "fcs_interface/dummy_fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
 #include "uav_msgs/BatteryPercentage.h"
+#include <uav_msgs/BatterySim.h>
 
 #include <chrono>
 #include <cmath>
@@ -25,8 +26,8 @@ bool DummyFCS_Interface::start() {
   // Subscribe to DJI OSDK topics
   gps_position_subscriber_ = node_handle_.subscribe<sensor_msgs::NavSatFix>("dji_sdk/gps_position", 10,
                                                                             &DummyFCS_Interface::gpsPositionCallback_, this);
-  battery_state_subscriber_ = node_handle_.subscribe<sensor_msgs::BatteryState>("dji_sdk/battery_state", 10,
-                                                                            &DummyFCS_Interface::batteryStateCallback_, this);
+  // battery_state_subscriber_ = node_handle_.subscribe<sensor_msgs::BatteryState>("dji_sdk/battery_state", 10,
+  //                                                                           &DummyFCS_Interface::batteryStateCallback_, this);
 
   //set up publishing topics
   battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
@@ -36,51 +37,60 @@ bool DummyFCS_Interface::start() {
   special_mv_server_.start();
   
   //wait for the home_location to be initialised (i.e. obtain first gps location)
-  while(ros::ok()) {
-    home_mutex_.lock();
-    if (home_position_initialised_) {
-      home_mutex_.unlock();
-      break;
-    }
-    home_mutex_.unlock();
-    ros::Duration(0.1).sleep();
-    ros::spinOnce();
-    ROS_INFO("Waiting to obtain first gps reading");
-  }
+  // while(ros::ok()) {
+  //   home_mutex_.lock();
+  //   if (home_position_initialised_) {
+  //     home_mutex_.unlock();
+  //     break;
+  //   }
+  //   home_mutex_.unlock();
+  //   ros::Duration(0.1).sleep();
+  //   ros::spinOnce();
+  //   ROS_INFO("Waiting to obtain first gps reading");
+  // }
   ROS_INFO("Started dummy FCS_Interface.");
   
   return true;
 }
 
 bool DummyFCS_Interface::droneTaskControl_() {
-  ros::Duration(10).sleep();
+  ros::Duration(10).sleep();  
   return true;
 }
 
 bool DummyFCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr &goal) {
-  std::future<bool> result = std::async(&DummyFCS_Interface::droneTaskControl_,this);
-
+  bool result {false};
+  double desired_height;
   bool preempted {false};
-  std::chrono::milliseconds span (100);
 
-  while((result.wait_for(span)==std::future_status::timeout) && ros::ok()) {
-
-    if(position_mutex_.try_lock()) {
-      special_mv_feedback_.current_location = gps_position_;
-      position_mutex_.unlock();
-      special_mv_server_.publishFeedback(special_mv_feedback_);
+  if(goal->movement.data == uav_msgs::SpecialMovement::TAKE_OFF) {
+    ROS_INFO("Taking off...");
+    result = true;
+  } else if (goal->movement.data == uav_msgs::SpecialMovement::LAND) {
+    ROS_INFO("Landing...");
+    result = true;
+  } else if (goal->movement.data == uav_msgs::SpecialMovement::GO_HOME) {
+    ROS_INFO("Returning home...");
+    result = true;
+    desired_height = 0;
+  }
+  std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+  while (ros::ok()) {
+    std::chrono::steady_clock::time_point current_time = std::chrono::steady_clock::now();
+    double elapsed_seconds = std::chrono::duration_cast<std::chrono::duration<double>>(current_time - start_time).count();
+        // Break the loop if elapsed time exceeds desired interval
+    if (elapsed_seconds > 7.0) {
+        break;
     }
-
     if(special_mv_server_.isPreemptRequested() || !ros::ok()) {
       ROS_INFO("%s: Preempted", special_mv_action_name_.c_str());
       special_mv_server_.setPreempted();
       preempted = true;
       break;
-    }
+      }
   }
-
   if(!preempted) {
-    if(!result.get()) {
+    if(!result) {
       ROS_WARN("Request for special movement has failed");
       special_mv_result_.done = false;
       special_mv_server_.setAborted(special_mv_result_); //consider sending a text msg as well to differentiate the reasons
@@ -92,10 +102,12 @@ bool DummyFCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalCon
       return true;
     }
   } else {
+    special_mv_result_.done = false;
     ROS_WARN("%s: Preempted", fly_action_name_.c_str());
     return false;
   }
 }
+
 
 bool DummyFCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
 {
@@ -158,11 +170,20 @@ void DummyFCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::Cons
   position_mutex_.unlock();
 }
 
-void DummyFCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
-    static int num_runs = 0;
+
+void DummyFCS_Interface::batteryStateCallback_(const uav_msgs::BatterySim::ConstPtr& message) {
+  static int num_runs = 0;
   uav_msgs::BatteryPercentage msg;
   msg.input_msg_id  = num_runs;
-  msg.percentage = int(message->percentage);
+  int perc = int(message->percentage);
+  if (perc < 0) {
+    perc = 0;
+  }
+  if (perc > 100) {
+    perc = 100;
+  }
+  msg.percentage = perc;
+  msg.stamp = ros::Time::now();
   battery_state_publisher_.publish(msg);
   num_runs++;
 }

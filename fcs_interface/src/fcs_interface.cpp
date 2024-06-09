@@ -1,6 +1,7 @@
 #include "fcs_interface/fcs_interface.h"
 #include "uav_msgs/SpecialMovement.h"
 #include "uav_msgs/BatteryPercentage.h"
+#include <uav_msgs/BatterySim.h>
 
 #include <chrono>
 #include <cmath>
@@ -39,11 +40,15 @@ bool FCS_Interface::start() {
   // Subscribe to DJI OSDK topics
   gps_position_subscriber_ = node_handle_.subscribe<sensor_msgs::NavSatFix>("dji_sdk/gps_position", 10,
                                                                             &FCS_Interface::gpsPositionCallback_, this);
-  battery_state_subscriber_ = node_handle_.subscribe<sensor_msgs::BatteryState>("dji_sdk/battery_state", 10,
+  // battery_state_subscriber_ = node_handle_.subscribe<sensor_msgs::BatteryState>("dji_sdk/battery_state", 10,
+  //                                                                           &FCS_Interface::batteryStateCallback_, this);
+    
+  battery_state_subscriber_ = node_handle_.subscribe<uav_msgs::BatterySim>("dji_sim/battery_state", 10,
                                                                             &FCS_Interface::batteryStateCallback_, this);
 
   //set up publishing topics
   battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
+  
 
   
   altitude_subscriber_ = node_handle_.subscribe<std_msgs::Float32>("dji_sdk/height_above_takeoff", 10,
@@ -205,6 +210,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   } else {
     special_mv_result_.done = false;
     ROS_WARN("%s: Preempted", fly_action_name_.c_str());
+    // droneTaskControl_(kTaskLand);
     return false;
   }
 }
@@ -477,7 +483,24 @@ void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr&
   position_mutex_.unlock();
 }
 
-void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
+// void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
+//   static int num_runs = 0;
+//   uav_msgs::BatteryPercentage msg;
+//   msg.input_msg_id  = num_runs;
+//   int perc = int(message->percentage);
+//   if (perc < 0) {
+//     perc = 0;
+//   }
+//   if (perc > 100) {
+//     perc = 100;
+//   }
+//   msg.percentage = perc;
+//   msg.stamp = ros::Time::now();
+//   battery_state_publisher_.publish(msg);
+//   num_runs++;
+// }
+
+void FCS_Interface::batteryStateCallback_(const uav_msgs::BatterySim::ConstPtr& message) {
   static int num_runs = 0;
   uav_msgs::BatteryPercentage msg;
   msg.input_msg_id  = num_runs;

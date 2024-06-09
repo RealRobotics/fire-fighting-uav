@@ -21,12 +21,23 @@
               <FlyToWpBTAction server_name="/fcs_interface/fly_to_wp" waypoint="{current_waypoint}"/>
             </Sequence>
           </RepeatOverVectorUntilFailure>
-          <ReactiveSequence>
-              <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
-              <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{go_home}"/>
-          </ReactiveSequence>
           <Sequence>
-              <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{land}"/>
+            <Fallback>
+               <KeepRunningUntilFailure>
+                  <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/>
+               </KeepRunningUntilFailure>
+              <!-- <IsBatteryRequiredStatus required_status="{battery_mission_critical}"/> -->
+              <!-- <IsBatteryRequiredStatus required_status="{battery_ok}"/> -->
+            </Fallback>
+            <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+            <IsBatteryRequiredStatus required_status="{battery_safety_critical}"/>
+            <!-- <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{go_home}"/> -->
+            <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{land}"/>
+          </Sequence>
+          <Sequence>
+            <IsMissionEnabled mission_enabled="{mission_enabled}"/>
+            <IsBatteryRequiredStatus required_status="{battery_safety_critical}"/>
+            <SpecialMovementBTAction server_name="/fcs_interface/special_movement" type_of_action="{land}"/>
           </Sequence>
         </Fallback>  
       </Sequence>

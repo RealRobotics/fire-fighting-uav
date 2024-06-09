@@ -21,6 +21,7 @@ set(MSG_FILES
   PumpStatus.msg
   GimbalStatus.msg
   GpsLocationWithPrecision.msg
+  BatterySim.msg
 )
 
 add_service_files(

@@ -1,0 +1,93 @@
+{
+  "num_waypoints": 15,
+  "wp0": {
+      "latitude": 53.809082,
+      "longitude": -1.5561214,
+      "altitude":10.0,
+      "precision": 1
+  },
+  "wp1": {
+      "latitude": 53.809872,
+      "longitude": -1.5567414,
+      "altitude":42.7,
+      "precision": 1
+  },
+  "wp2": {
+      "latitude": 53.810132,
+      "longitude": -1.5580314,
+      "altitude":53.6,
+      "precision": 1
+  },
+  "wp3": {
+      "latitude": 53.809252,
+      "longitude": -1.5585214,
+      "altitude":12.8,
+      "precision": 1
+  },
+  "wp4": {
+      "latitude": 53.808542,
+      "longitude": -1.5585914,
+      "altitude":45.4,
+      "precision": 1
+  },
+  "wp5": {
+      "latitude": 53.808132,
+      "longitude": -1.5572814,
+      "altitude":36.2,
+      "precision": 1
+  },
+  "wp6": {
+      "latitude": 53.807962,
+      "longitude": -1.5552814,
+      "altitude":62.8,
+      "precision": 1
+  },
+  "wp7": {
+      "latitude": 53.809632,
+      "longitude": -1.5542514,
+      "altitude":19.5,
+      "precision": 1
+  },
+  "wp8": {
+      "latitude": 53.811742,
+      "longitude": -1.5550014,
+      "altitude":98.0,
+      "precision": 1
+  },
+  "wp9": {
+      "latitude": 53.812122,
+      "longitude": -1.5571714,
+      "altitude":52.5,
+      "precision": 1
+  },
+  "wp10": {
+      "latitude": 53.811762,
+      "longitude": -1.5584814,
+      "altitude":14.6,
+      "precision": 1
+  },
+  "wp11": {
+      "latitude": 53.811052,
+      "longitude": -1.5595514,
+      "altitude":28.1,
+      "precision": 1
+  },
+  "wp12": {
+      "latitude": 53.808732,
+      "longitude": -1.5596214,
+      "altitude":59.6,
+      "precision": 1
+  },
+  "wp13": {
+      "latitude": 53.807322,
+      "longitude": -1.5570614,
+      "altitude":77.8,
+      "precision": 1
+  },
+  "wp14": {
+      "latitude": 53.807322,
+      "longitude": -1.5550914,
+      "altitude":85.5,
+      "precision": 1
+  }
+}

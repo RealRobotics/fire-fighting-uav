@@ -7,6 +7,7 @@
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/BatteryState.h>
 #include <actionlib/server/simple_action_server.h>
+#include <uav_msgs/BatterySim.h>
 
 #include "uav_msgs/FlyToWPAction.h"
 #include "uav_msgs/SpecialMovementAction.h"
@@ -31,7 +32,7 @@ private:
   bool uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix);
 
   void gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message);
-  void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
+  void batteryStateCallback_(const uav_msgs::BatterySim::ConstPtr& message);
 
   ros::NodeHandle node_handle_;
 

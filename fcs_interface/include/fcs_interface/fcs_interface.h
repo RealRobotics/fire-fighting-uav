@@ -7,6 +7,7 @@
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/BatteryState.h>
 #include <actionlib/server/simple_action_server.h>
+#include <uav_msgs/BatterySim.h>
 
 #include <dji_sdk/MissionWaypointTask.h>
 #include <djiosdk/dji_vehicle.hpp>
@@ -61,7 +62,8 @@ private:
   bool droneWithinRadius_(double radius, sensor_msgs::NavSatFix goal);
 
   void gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message);
-  void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
+  // void batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message);
+  void batteryStateCallback_(const uav_msgs::BatterySim::ConstPtr& message);
   void altitudeCallback_(const std_msgs::Float32::ConstPtr& message);
 
   sensor_msgs::NavSatFix generate_mid_point_(const sensor_msgs::NavSatFix& nav_sat_fix);

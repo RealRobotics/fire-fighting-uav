@@ -3,6 +3,8 @@
 
 #include "behaviortree_ros/bt_action_node.h"
 #include "uav_msgs/SpecialMovementAction.h"
+#include "uav_msgs/BatteryStatus.h"
+#include <atomic>
 
 class SpecialMovementBTAction : public BT::RosActionNode<uav_msgs::SpecialMovementAction>{
  public:
@@ -14,6 +16,13 @@ class SpecialMovementBTAction : public BT::RosActionNode<uav_msgs::SpecialMoveme
   virtual BT::NodeStatus onFailedRequest(FailureCause failure) override;
 
  private:
+ void batteryStatusCallback_(const uav_msgs::BatteryStatus::ConstPtr& message);
+ ros::NodeHandle nh_;
+ ros::Subscriber battery_status_sub_;
+ std::mutex status_mtx_;
+ uint8_t current_status_ {uav_msgs::BatteryStatus::SAFETY_CRITICAL};
+ uint8_t required_status_ {uav_msgs::BatteryStatus::SAFETY_CRITICAL};
+ std::atomic<bool> statementExecuted{false};
 };
 
 #endif //SPECIAL_MOVEMENT_BT_ACTION_H
