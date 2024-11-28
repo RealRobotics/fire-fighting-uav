@@ -19,10 +19,28 @@
 #include <dji_sdk/SDKControlAuthority.h>
 #include <dji_sdk/SetLocalPosRef.h>
 #include <djiosdk/dji_vehicle.hpp>
+#include <std_msgs/Time.h>
 
 #define UNLADEN_VELOCITY_M_PER_S (2.0)
 #define LADEN_VELOCITY_M_PER_S (1.0)
 #define VELOCITY_RANGE_M_PER_S (5.0)
+
+#define SERVICE_CALL(method,request,response) \
+  { \
+    std_msgs::Time __msg; \
+    __msg.data = ros::Time::now(); \
+    request.publish(__msg); \
+    method; \
+    __msg.data = ros::Time::now(); \
+    response.publish(__msg); \
+  } \
+
+#define INPUT_ACCEPTED(publisher) \
+  { \
+    std_msgs::Time __msg; \
+    __msg.data = ros::Time::now(); \
+    publisher.publish(__msg); \
+  } \
 
 // FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
 // : node_handle_(node_handle), fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
@@ -65,7 +83,27 @@ bool FCS_Interface::start() {
   fly_server_.start();
   special_mv_server_.start();
   relative_position_server_.start();
+
+  // testing instrumentation
+  control_authority_service_request = node_handle_.advertise<std_msgs::Time>("fcs_interface/sdk_control_authority_request", 10);
+  control_authority_service_respond = node_handle_.advertise<std_msgs::Time>("fcs_interface/sdk_control_authority_respond", 10);
   
+  drone_activation_client_request = node_handle_.advertise<std_msgs::Time>("fcs_interface/sdk_activation_request", 10);
+  drone_activation_client_respond = node_handle_.advertise<std_msgs::Time>("fcs_interface/sdk_activation_respond", 10);
+  
+  drone_task_client_request = node_handle_.advertise<std_msgs::Time>("fcs_interface/drone_task_control_request", 10);
+  drone_task_client_respond = node_handle_.advertise<std_msgs::Time>("fcs_interface/drone_task_control_respond", 10);
+  
+  waypoint_action_client_request = node_handle_.advertise<std_msgs::Time>("fcs_interface/mission_waypoint_action_request", 10);
+  waypoint_action_client_respond = node_handle_.advertise<std_msgs::Time>("fcs_interface/mission_waypoint_action_respond", 10);
+
+  waypoint_upload_client_request = node_handle_.advertise<std_msgs::Time>("fcs_interface/mission_waypoint_upload_request", 10);
+  waypoint_upload_client_respond = node_handle_.advertise<std_msgs::Time>("fcs_interface/mission_waypoint_upload_respond", 10);
+
+  gps_position_accepted = node_handle_.advertise<std_msgs::Time>("fcs_interface/gps_position_accepted", 10);
+  battery_state_accepted = node_handle_.advertise<std_msgs::Time>("fcs_interface/dji_battery_state_accepted", 10);
+  height_above_takeoff_accepted = node_handle_.advertise<std_msgs::Time>("fcs_interface/height_above_takeoff_accepted", 10);
+
   //finally activate the drone, get control and wait for the home_location to be initialised (i.e. obtain first gps location)
   bool result = getReady_();
   if (result) {
@@ -87,7 +125,9 @@ bool FCS_Interface::start() {
 
 bool FCS_Interface::activate_() {
   dji_sdk::Activation activation;
-  drone_activation_client_.call(activation);
+  /***** TEST INSTRUMENTATION *****/
+  SERVICE_CALL(drone_activation_client_.call(activation),drone_activation_client_request,drone_activation_client_respond);
+  /********************************/
   auto response = activation.response;
   bool result = response.result;
   if (result) {
@@ -105,7 +145,9 @@ bool FCS_Interface::obtainControlAuthority_() {
   // Obtain Control Authority
   dji_sdk::SDKControlAuthority authority;
   authority.request.control_enable = 1;
-  control_authority_client_.call(authority);
+  /********* TEST INSTRUMENTATION *********/
+  SERVICE_CALL(control_authority_client_.call(authority),control_authority_service_request,control_authority_service_respond);
+  /****************************************/
   if (authority.response.result) {
     ROS_INFO("Obtained SDK control authority successfully");
     result = true;
@@ -138,7 +180,9 @@ bool FCS_Interface::droneTaskControl_(DroneTask task) {
       droneTaskControl.request.task = dji_sdk::DroneTaskControl::Request::TASK_GOHOME;
       break;
   }
-  drone_task_client_.call(droneTaskControl);
+  /******** TEST INSTRUMENTATION **********/
+  SERVICE_CALL(drone_task_client_.call(droneTaskControl),drone_task_client_request,drone_task_client_respond);
+  /****************************************/
   result = droneTaskControl.response.result;
   if (!result) {
     ROS_WARN("droneTaskControl failed.");
@@ -392,7 +436,9 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   // Initialise the waypoint mission.
   dji_sdk::MissionWpUpload missionWaypointUpload;
   missionWaypointUpload.request.waypoint_task = waypointTask;
-  waypoint_upload_client_.call(missionWaypointUpload);
+  /****** TEST INSTRUMENTATION *****/
+  SERVICE_CALL(waypoint_upload_client_.call(missionWaypointUpload),waypoint_upload_client_request,waypoint_upload_client_respond);
+  /*********************************/
   if (!missionWaypointUpload.response.result) {
     ROS_WARN("Failed sending mission upload command");
     ROS_WARN("ack.info: set = %i id = %i", missionWaypointUpload.response.cmd_set,
@@ -432,7 +478,9 @@ bool FCS_Interface::waypointMissionAction_(WaypointAction action) {
       ROS_WARN("Waypoint action not handled, %d", action);
       break;
   }
-  result = waypoint_action_client_.call(wp_action);
+  /****** TEST INSTRUMENTATION *****/
+  SERVICE_CALL(result = waypoint_action_client_.call(wp_action),waypoint_action_client_request,waypoint_action_client_respond);
+  /*********************************/
   if (!wp_action.response.result) {
     ROS_WARN("waypointMissionAction failed.");
     ROS_WARN("ack.info: set = %i id = %i", wp_action.response.cmd_set, wp_action.response.cmd_id);
@@ -474,6 +522,9 @@ bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goa
 
 //TODO use gps health to trust the data only if health is good
 void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message) {
+  /**** TEST INSTRUMENTATION ****/
+  INPUT_ACCEPTED(gps_position_accepted);
+  /******************************/
   static int num_runs = 0;
   if (num_runs == 0) {
     home_mutex_.lock();
@@ -489,6 +540,9 @@ void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr&
 }
 
 void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::ConstPtr& message) {
+  /**** TEST INSTRUMENTATION ****/
+  INPUT_ACCEPTED(battery_state_accepted);
+  /******************************/
   static int num_runs = 0;
   uav_msgs::BatteryPercentage msg;
   msg.input_msg_id  = num_runs;
@@ -506,6 +560,9 @@ void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::Const
 }
 
 void FCS_Interface::altitudeCallback_(const std_msgs::Float32::ConstPtr& message) {
+  /**** TEST INSTRUMENTATION ****/
+  INPUT_ACCEPTED(height_above_takeoff_accepted);
+  /******************************/
   altitude_mutex_.lock();
   altitude_ = message->data;
   altitude_mutex_.unlock();

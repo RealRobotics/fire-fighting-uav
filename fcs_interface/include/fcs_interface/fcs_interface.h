@@ -151,6 +151,26 @@ private:
   sensor_msgs::NavSatFix home_location_;
   bool home_position_initialised_ {false};
 
+  /**** TEST INSTRUMENTATION ****/
+  ros::Publisher control_authority_service_request;
+  ros::Publisher control_authority_service_respond;
+  
+  ros::Publisher drone_activation_client_request;
+  ros::Publisher drone_activation_client_respond;
+  
+  ros::Publisher drone_task_client_request;
+  ros::Publisher drone_task_client_respond;
+  
+  ros::Publisher waypoint_action_client_request;
+  ros::Publisher waypoint_action_client_respond;
+
+  ros::Publisher waypoint_upload_client_request;
+  ros::Publisher waypoint_upload_client_respond;
+
+  ros::Publisher gps_position_accepted;
+  ros::Publisher battery_state_accepted;
+  ros::Publisher height_above_takeoff_accepted;
+
 };
 
 #endif //FCS_INTERFACE_H
