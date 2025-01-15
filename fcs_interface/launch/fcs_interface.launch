@@ -1,0 +1,3 @@
+<launch>
+    <node name="fcs_interface" pkg="fcs_interface" type="fcs_interface_node" output="screen"/>
+</launch>

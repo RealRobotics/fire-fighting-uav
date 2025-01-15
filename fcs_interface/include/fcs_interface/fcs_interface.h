@@ -171,6 +171,13 @@ private:
   ros::Publisher battery_state_accepted;
   ros::Publisher height_above_takeoff_accepted;
 
+  std::mutex gps_position_accepted_mutex;
+  std::mutex dji_battery_state_accepted_mutex;
+  std::mutex height_above_takeoff_accepted_mutex;
+
+  bool gps_position_read = false;
+  bool height_above_takeoff_read = false;
+
 };
 
 #endif //FCS_INTERFACE_H

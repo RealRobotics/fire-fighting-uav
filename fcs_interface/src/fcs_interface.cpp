@@ -30,16 +30,30 @@
     std_msgs::Time __msg; \
     __msg.data = ros::Time::now(); \
     request.publish(__msg); \
+    ros::spinOnce(); \
     method; \
     __msg.data = ros::Time::now(); \
     response.publish(__msg); \
+    ros::spinOnce(); \
   } \
+
+#define INPUT_ACCEPTED_CONDITIONAL(publisher,condition)   \
+{ \
+    if (condition) { \
+      condition = false; \
+      std_msgs::Time __msg; \
+      __msg.data = ros::Time::now(); \
+      publisher.publish(__msg); \
+      ros::spinOnce(); \
+    } \
+} \
 
 #define INPUT_ACCEPTED(publisher) \
   { \
     std_msgs::Time __msg; \
     __msg.data = ros::Time::now(); \
     publisher.publish(__msg); \
+    ros::spinOnce(); \
   } \
 
 // FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
@@ -103,6 +117,9 @@ bool FCS_Interface::start() {
   gps_position_accepted = node_handle_.advertise<std_msgs::Time>("fcs_interface/gps_position_accepted", 10);
   battery_state_accepted = node_handle_.advertise<std_msgs::Time>("fcs_interface/dji_battery_state_accepted", 10);
   height_above_takeoff_accepted = node_handle_.advertise<std_msgs::Time>("fcs_interface/height_above_takeoff_accepted", 10);
+
+  ros::spinOnce();
+  ros::Duration(1).sleep();
 
   //finally activate the drone, get control and wait for the home_location to be initialised (i.e. obtain first gps location)
   bool result = getReady_();
@@ -217,6 +234,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
   bool preempted {false};
   altitude_mutex_.lock();
   double height_error = std::abs(desired_height - altitude_);
+  INPUT_ACCEPTED_CONDITIONAL(height_above_takeoff_accepted,height_above_takeoff_read)
   altitude_mutex_.unlock();
 
   ros::Duration feedback_period(0.1);
@@ -225,9 +243,11 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
 
     if(position_mutex_.try_lock()) {
       special_mv_feedback_.current_location = gps_position_;
+      INPUT_ACCEPTED_CONDITIONAL(gps_position_accepted,gps_position_read)
       position_mutex_.unlock();
       altitude_mutex_.lock();
       special_mv_feedback_.current_location.altitude = altitude_;
+      INPUT_ACCEPTED_CONDITIONAL(height_above_takeoff_accepted,height_above_takeoff_read)
       altitude_mutex_.unlock();
       special_mv_server_.publishFeedback(special_mv_feedback_);
     }
@@ -241,6 +261,7 @@ bool FCS_Interface::specialMovement_(const uav_msgs::SpecialMovementGoalConstPtr
 
     altitude_mutex_.lock();
     height_error = std::abs(desired_height - altitude_);
+    INPUT_ACCEPTED_CONDITIONAL(height_above_takeoff_accepted,height_above_takeoff_read)
     altitude_mutex_.unlock();
 
     feedback_period.sleep();
@@ -284,9 +305,11 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
 
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;
+        INPUT_ACCEPTED_CONDITIONAL(gps_position_accepted,gps_position_read)
         position_mutex_.unlock();
         altitude_mutex_.lock();
         fly_feedback_.current_location.altitude = altitude_;
+        INPUT_ACCEPTED_CONDITIONAL(height_above_takeoff_accepted,height_above_takeoff_read)
         altitude_mutex_.unlock();
         fly_server_.publishFeedback(fly_feedback_);
       }
@@ -365,9 +388,12 @@ sensor_msgs::NavSatFix FCS_Interface::generate_mid_point_(const sensor_msgs::Nav
   sensor_msgs::NavSatFix mid_wp;
   position_mutex_.lock();
   double latitude_diff = (nav_sat_fix.latitude - gps_position_.latitude)/2.0;
+  INPUT_ACCEPTED_CONDITIONAL(gps_position_accepted,gps_position_read)
   double longitude_diff = (nav_sat_fix.longitude - gps_position_.longitude)/2.0;
+  INPUT_ACCEPTED_CONDITIONAL(gps_position_accepted,gps_position_read)
   altitude_mutex_.lock();
   double altitude_diff = (nav_sat_fix.altitude - altitude_)/2.0;
+  INPUT_ACCEPTED_CONDITIONAL(height_above_takeoff_accepted,height_above_takeoff_read)
   altitude_mutex_.unlock();
   position_mutex_.unlock();
 
@@ -384,9 +410,12 @@ sensor_msgs::NavSatFix FCS_Interface::generate_d_point_(const sensor_msgs::NavSa
   sensor_msgs::NavSatFix adjusted_wp;
   position_mutex_.lock();
   double latitude_diff = (nav_sat_fix.latitude - gps_position_.latitude) / 2.0;
+  INPUT_ACCEPTED_CONDITIONAL(gps_position_accepted,gps_position_read)
   double longitude_diff = (nav_sat_fix.longitude - gps_position_.longitude) / 2.0;
+  INPUT_ACCEPTED_CONDITIONAL(gps_position_accepted,gps_position_read)
   altitude_mutex_.lock();
   double altitude_diff = (nav_sat_fix.altitude - altitude_) / 2.0;
+  INPUT_ACCEPTED_CONDITIONAL(height_above_takeoff_accepted,height_above_takeoff_read)
   altitude_mutex_.unlock();
   position_mutex_.unlock();
 
@@ -419,6 +448,7 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   position_mutex_.lock();
   altitude_mutex_.lock();
   gps_position_.altitude = altitude_;
+  INPUT_ACCEPTED_CONDITIONAL(height_above_takeoff_accepted,height_above_takeoff_read)
   altitude_mutex_.unlock();
   // convertToWaypoint_(gps_position_, waypoint);
   position_mutex_.unlock();
@@ -495,7 +525,9 @@ bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goa
   double R = 6378.137; // Radius of earth in KM
   position_mutex_.lock();
   double lat1 = gps_position_.latitude;
+  INPUT_ACCEPTED_CONDITIONAL(gps_position_accepted,gps_position_read)
   double lon1 = gps_position_.longitude;
+  INPUT_ACCEPTED_CONDITIONAL(gps_position_accepted,gps_position_read)
   position_mutex_.unlock();
 
   double lat2 = goal.latitude;
@@ -523,7 +555,7 @@ bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goa
 //TODO use gps health to trust the data only if health is good
 void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message) {
   /**** TEST INSTRUMENTATION ****/
-  INPUT_ACCEPTED(gps_position_accepted);
+  //INPUT_ACCEPTED(gps_position_accepted);
   /******************************/
   static int num_runs = 0;
   if (num_runs == 0) {
@@ -535,6 +567,7 @@ void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr&
   } 
 
   position_mutex_.lock();
+  gps_position_read = true;
   gps_position_ = *message;
   position_mutex_.unlock();
 }
@@ -561,9 +594,10 @@ void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::Const
 
 void FCS_Interface::altitudeCallback_(const std_msgs::Float32::ConstPtr& message) {
   /**** TEST INSTRUMENTATION ****/
-  INPUT_ACCEPTED(height_above_takeoff_accepted);
+  //INPUT_ACCEPTED(height_above_takeoff_accepted);
   /******************************/
   altitude_mutex_.lock();
+  height_above_takeoff_read = true;
   altitude_ = message->data;
   altitude_mutex_.unlock();
 }
