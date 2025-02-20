@@ -130,20 +130,20 @@ private:
   
   actionlib::SimpleActionServer<uav_msgs::SpecialMovementAction> special_mv_server_;
   actionlib::SimpleActionServer<uav_msgs::FlyToWPAction> fly_server_;
-  actionlib::SimpleActionServer<uav_msgs::RelativePositionAction> relative_position_server_;
+//  actionlib::SimpleActionServer<uav_msgs::RelativePositionAction> relative_position_server_;
 
 
   std::string fly_action_name_ {"fcs/fly_to_wp"};
   std::string special_mv_action_name_ {"fcs/special_movement"};
-   std::string relative_position_action_name_ {"fcs/relative_position"};
+  //  std::string relative_position_action_name_ {"fcs/relative_position"};
 
   uav_msgs::FlyToWPFeedback fly_feedback_;
   uav_msgs::SpecialMovementFeedback special_mv_feedback_;
-  uav_msgs::RelativePositionFeedback relative_position_feedback_;
+  // uav_msgs::RelativePositionFeedback relative_position_feedback_;
 
   uav_msgs::FlyToWPResult fly_result_;
   uav_msgs::SpecialMovementResult special_mv_result_;
-  uav_msgs::RelativePositionResult relative_position_result_;
+  // uav_msgs::RelativePositionResult relative_position_result_;
   
 
   const double take_off_height_ {1.2};

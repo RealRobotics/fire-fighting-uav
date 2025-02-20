@@ -62,12 +62,8 @@
 // }
 
 FCS_Interface::FCS_Interface(ros::NodeHandle node_handle)
-  : node_handle_(node_handle),
-    fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
-    special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false)
-    //,
-    //relative_position_server_(node_handle, "fcs_interface/relative_position", boost::bind(&FCS_Interface::setTarget_relative_position_, this, _1), false) 
-    {
+: node_handle_(node_handle), fly_server_(node_handle, "fcs_interface/fly_to_wp", boost::bind(&FCS_Interface::setWaypoint_, this, _1), false),
+  special_mv_server_(node_handle, "fcs_interface/special_movement", boost::bind(&FCS_Interface::specialMovement_, this, _1), false) {
 }
 
 bool FCS_Interface::start() {
@@ -78,22 +74,19 @@ bool FCS_Interface::start() {
   drone_task_client_ = node_handle_.serviceClient<dji_sdk::DroneTaskControl>("dji_sdk/drone_task_control");
   waypoint_action_client_ = node_handle_.serviceClient<dji_sdk::MissionWpAction>("dji_sdk/mission_waypoint_action");
   waypoint_upload_client_ = node_handle_.serviceClient<dji_sdk::MissionWpUpload>("dji_sdk/mission_waypoint_upload");
-  set_local_pos_reference    = node_handle_.serviceClient<dji_sdk::SetLocalPosRef> ("dji_sdk/set_local_pos_ref");
+
   // Subscribe to DJI OSDK topics
   gps_position_subscriber_ = node_handle_.subscribe<sensor_msgs::NavSatFix>("dji_sdk/gps_position", 10,
                                                                             &FCS_Interface::gpsPositionCallback_, this);
   battery_state_subscriber_ = node_handle_.subscribe<sensor_msgs::BatteryState>("dji_sdk/battery_state", 10,
                                                                             &FCS_Interface::batteryStateCallback_, this);
 
-  // local_position_subscriber_ = node_handle_.subscribe("dji_sdk/local_position", 10, &FCS_Interface::relative_position_Callback_, this);
-  gps_health_subscriber_      = node_handle_.subscribe("dji_sdk/gps_health", 10, &FCS_Interface::gps_health_Callback_,this);
-  altitude_subscriber_ = node_handle_.subscribe<std_msgs::Float32>("dji_sdk/height_above_takeoff", 10,
-                                                                            &FCS_Interface::altitudeCallback_, this);
-
   //set up publishing topics
   battery_state_publisher_ = node_handle_.advertise<uav_msgs::BatteryPercentage>("fcs_interface/battery_state", 10);
 
-  ctrlPosYawPub = node_handle_.advertise<sensor_msgs::Joy>("dji_sdk/flight_control_setpoint_ENUposition_yaw", 10);
+  
+  altitude_subscriber_ = node_handle_.subscribe<std_msgs::Float32>("dji_sdk/height_above_takeoff", 10,
+                                                                            &FCS_Interface::altitudeCallback_, this);
 
   //start the action servers
   fly_server_.start();
@@ -302,8 +295,7 @@ bool FCS_Interface::setWaypoint_(const uav_msgs::FlyToWPGoalConstPtr &goal)
   } else {
     bool preempted {false};
     ros::Duration feedback_period(0.1);
-    while(!droneWithinRadius_(goal->goal.loc_precision, nav_sat_fix) && ros::ok()) 
-    {
+    while(!droneWithinRadius_(goal->goal.loc_precision, nav_sat_fix) && ros::ok()) {
 
       if(position_mutex_.try_lock()) {
         fly_feedback_.current_location = gps_position_;
@@ -365,7 +357,7 @@ void FCS_Interface::convertToWaypoint_(const sensor_msgs::NavSatFix& nav_sat_fix
   // Convert the nav_sat_fix to a mission waypoint.
   // From demo_mission::uploadWaypoints()
   waypoint.latitude = nav_sat_fix.latitude;
-  waypoint.longitude = nav_sat_fix.longitude;
+  waypoint.longitude = nav_sat_fix.longitude + 4;
   waypoint.altitude = nav_sat_fix.altitude;
   waypoint.damping_distance = 0;
   waypoint.target_yaw = 0;
@@ -455,6 +447,8 @@ bool FCS_Interface::uploadNavSatFix_(const sensor_msgs::NavSatFix& nav_sat_fix) 
   // convertToWaypoint_(gps_position_, waypoint);
   position_mutex_.unlock();
   // waypointTask.mission_waypoint.push_back(waypoint);
+
+
 
     convertToWaypoint_(nav_sat_fix, waypoint);
     waypointTask.mission_waypoint.push_back(waypoint);
@@ -556,9 +550,6 @@ bool FCS_Interface::droneWithinRadius_(double radius, sensor_msgs::NavSatFix goa
 
 //TODO use gps health to trust the data only if health is good
 void FCS_Interface::gpsPositionCallback_(const sensor_msgs::NavSatFix::ConstPtr& message) {
-  /**** TEST INSTRUMENTATION ****/
-  //INPUT_ACCEPTED(gps_position_accepted);
-  /******************************/
   static int num_runs = 0;
   if (num_runs == 0) {
     home_mutex_.lock();
@@ -595,167 +586,8 @@ void FCS_Interface::batteryStateCallback_(const sensor_msgs::BatteryState::Const
 }
 
 void FCS_Interface::altitudeCallback_(const std_msgs::Float32::ConstPtr& message) {
-  /**** TEST INSTRUMENTATION ****/
-  //INPUT_ACCEPTED(height_above_takeoff_accepted);
-  /******************************/
   altitude_mutex_.lock();
   height_above_takeoff_read = true;
   altitude_ = message->data;
   altitude_mutex_.unlock();
-}
-
-// void FCS_Interface::setTarget_relative_position_(const uav_msgs::RelativePositionGoalConstPtr &goal) // added for relative postion
-// {
-//     uav_msgs::RelativePosition relative_position_goal = goal->goal;
-  
-//     target_offset_x = relative_position_goal.xv_relative;
-//     target_offset_y = relative_position_goal.yv_relative;
-//     target_offset_z= relative_position_goal.zv_relative;
-//     target_yaw = relative_position_goal.yawv_relative;
-
-//     // current_attitude is a geometry_msgs::Quaternion message
-//     tf::Quaternion q(
-//     current_attitude.quaternion.x,
-//     current_attitude.quaternion.y,
-//     current_attitude.quaternion.z,
-//     current_attitude.quaternion.w
-//   );
-
-//     tf::Matrix3x3 m(q);
-
-//     double roll, pitch, initial_yaw,yawC;
-//     m.getRPY(roll, pitch, initial_yaw);
-
-//     if (current_gps_health > 3) 
-//     {
-//       if (set_reference_relative_position_())
-//       {
-//         relative_position_ctrl_(relative_position.point.x, relative_position.point.y, relative_position.point.z, yawC);
-//         double error_x = target_offset_x;
-//         double error_y = target_offset_y;
-//         double error_yaw = target_yaw ;
-//         double yaw_offset_InertialToBody = initial_yaw - yawC;
-//         double yawC = yaw_offset_InertialToBody - error_yaw;
-//         double xC =  cos(yaw_offset_InertialToBody) * error_x - sin(yaw_offset_InertialToBody) * error_y;
-//         double yC =  sin(yaw_offset_InertialToBody) * error_x + cos(yaw_offset_InertialToBody) * error_y;
-//         double xCom= xC + relative_position.point.x;
-//         double yCom= yC + relative_position.point.y;
-//         relative_position_ctrl_(xCom, yCom , relative_position.point.z, yawC);
-//       }
-//       else 
-//       {
-//           ROS_INFO("Local Reference not Set");
-//           relative_position_server_.setAborted();
-//       }
-//     }
-//     else
-//     {
-//       ROS_INFO("Cannot execute Local Position Control");
-//       ROS_INFO("Not enough GPS Satellites");
-//       relative_position_server_.setAborted();
-//     }
-//   relative_position_result_.at_target = at_target_result;
-
-//   if(relative_position_result_.at_target)
-//   {
-//     relative_position_server_.setSucceeded(relative_position_result_);
-//   }
-//   else
-//   {
-//     relative_position_server_.setAborted(relative_position_result_);
-//   }
-// }
-
-// /*!
-//  * This function calculates the difference between camera target and current  position
-//  * and sends the commands to the Position and Yaw control topic.
-//  *
-//  */
-// void FCS_Interface::relative_position_ctrl_(double &xCmd, double &yCmd, double &zCmd, double &yawCmd)
-// {
-//   const float pos_threshold = 0.1;
-//   at_target_result=false;
-
-//   while (!at_target_result && ros::ok())
-//   {
-//     if (current_gps_health > 3)
-//     {
-//       xCmd = target_offset_x - relative_position.point.x;
-//       yCmd = target_offset_y - relative_position.point.y;
-//       zCmd = target_offset_z;
-
-//       sensor_msgs::Joy controlPosYaw;
-//       controlPosYaw.axes.push_back(xCmd);
-//       controlPosYaw.axes.push_back(yCmd);
-//       controlPosYaw.axes.push_back(zCmd);
-//       controlPosYaw.axes.push_back(target_yaw);
-//       ctrlPosYawPub.publish(controlPosYaw);
-//     }
-//     else
-//     {
-//       ROS_INFO("Cannot execute Relative Position Control");
-//       ROS_INFO("Not enough GPS Satellites");
-//       at_target_result = false;
-//        break;  // exit the loop if GPS health is not sufficient
-//     }
-
-//     bool ck1 = (std::abs(xCmd) > pos_threshold);
-//     bool ck2 = (std::abs(yCmd) > pos_threshold);
-//     bool ck3 = (relative_position.point.z < (target_offset_z - pos_threshold));
-//     bool ck4 = (relative_position.point.z > (target_offset_z + pos_threshold));
-
-//     at_target_result = !(ck1 || ck2 || ck3 || ck4);
-   
-//     ros::Duration(0.02).sleep();
-//     ros::spinOnce();
-//   }
-// }
-
-
-void FCS_Interface::gps_health_Callback_(const std_msgs::UInt8::ConstPtr& msg) {
-  current_gps_health = msg->data;
-  // ROS_INFO("Current GPS Health: %d", static_cast<int>(current_gps_health));
-}
-
-void FCS_Interface::flight_status_Callback_(const std_msgs::UInt8::ConstPtr& msg)
-{
-  flight_status = msg->data;
-}
-
-void FCS_Interface::display_mode_Callback_(const std_msgs::UInt8::ConstPtr& msg)
-{
-  display_mode = msg->data;
-}
-
-// /**
-//  * Sets the local position reference if not already set and returns true if successful, false otherwise.
-//  * Updates the internal flag 'referenceSet_' to reflect the state of the local position reference.
-//  */
-// bool FCS_Interface::set_reference_relative_position_()
-// {
-//     if (!referenceSet_)
-//     {
-//         dji_sdk::SetLocalPosRef localPosReferenceSetter;
-//         set_local_pos_reference.call(localPosReferenceSetter);
-
-//         // Update the flag to indicate that the reference has been set
-//         referenceSet_ = static_cast<bool>(localPosReferenceSetter.response.result);
-
-//         // Return the result of the service call
-//         return referenceSet_;
-//     }
-
-//     // No need for an explicit else block, it will return referenceSet_ by default
-//     return referenceSet_;
-// }
-
-// /*!
-//  * This function is called when local position data is available.
-//  */
-// void FCS_Interface::relative_position_Callback_(const geometry_msgs::PointStamped::ConstPtr& msg) 
-// {
-//   relative_position = *msg;
-// }
-void FCS_Interface::attitudeCallback_(const geometry_msgs::QuaternionStamped::ConstPtr& msg) {
-  current_attitude = *msg;
 }

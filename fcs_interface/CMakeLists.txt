@@ -150,6 +150,15 @@ set(SERVER_SOURCES
 add_executable(${PROJECT_NAME}_node ${SERVER_SOURCES})
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+add_executable(${PROJECT_NAME}_m1_node src/main.cpp src/fcs_interface_m1.cpp)
+add_dependencies(${PROJECT_NAME}_m1_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(${PROJECT_NAME}_m2_node src/main.cpp src/fcs_interface_m2.cpp)
+add_dependencies(${PROJECT_NAME}_m2_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(${PROJECT_NAME}_m3_node src/main.cpp src/fcs_interface_m3.cpp)
+add_dependencies(${PROJECT_NAME}_m3_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 add_executable(${PROJECT_NAME}_dummy_node src/dummy_main.cpp src/dummy_fcs_interface.cpp)
 add_dependencies(${PROJECT_NAME}_dummy_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
@@ -170,6 +179,24 @@ add_dependencies(${PROJECT_NAME}_dummy_node ${${PROJECT_NAME}_EXPORTED_TARGETS} 
 
 target_link_libraries(
   ${PROJECT_NAME}_node
+  ${catkin_LIBRARIES}
+  ${DJIOSDK_LIBRARIES}
+)
+
+target_link_libraries(
+  ${PROJECT_NAME}_m1_node
+  ${catkin_LIBRARIES}
+  ${DJIOSDK_LIBRARIES}
+)
+
+target_link_libraries(
+  ${PROJECT_NAME}_m2_node
+  ${catkin_LIBRARIES}
+  ${DJIOSDK_LIBRARIES}
+)
+
+target_link_libraries(
+  ${PROJECT_NAME}_m3_node
   ${catkin_LIBRARIES}
   ${DJIOSDK_LIBRARIES}
 )
